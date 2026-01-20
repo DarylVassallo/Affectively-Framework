@@ -75,13 +75,22 @@ def addLine(lv):
     return np.concatenate([lv[0:1], lv[0:n], lv[n-1:n]], axis=0)
 
 def calculate_broken_pipes(data):
+    print("calculate broken pipes 1")
+    
     rule_file = json.load(open(rootpath + '//CNet//data//legal_rule.json'))
     rule = set()
+
+    print("calculate broken pipes 2")
+
     for e in rule_file:
         rule.add(tuple(e))
     height = len(data)
     width = len(data[0])
     cnt = 0
+
+    print("calculate broken pipes 3")
+    print("cal cnt 1 : " + str(cnt))
+
     for i in range(height):
         for j in range(width):
             flag = False
@@ -102,4 +111,9 @@ def calculate_broken_pipes(data):
             info = np.array(info)
             if flag and tuple(info) not in rule:
                 cnt += 1
+                print("cal cnt 2 : " + str(cnt))
+
+    print("calculate broken pipes 4")
+    print("cal cnt 3 : " + str(cnt))
+
     return cnt

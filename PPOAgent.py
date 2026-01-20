@@ -25,8 +25,6 @@ import sys
 # print("SHOWING")
 # print(sys.executable)
 
-from stable_baselines3.common.vec_env import SubprocVecEnv
-
 class CustomMLPExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
         super().__init__(observation_space, features_dim)
@@ -75,8 +73,6 @@ if __name__ == "__main__":
     env = GANLevelEnv()
     env = Monitor(env)
 
-    # env = SubprocVecEnv([make_env(i) for i in range(5)])
-
     label = 'optimize' if weight == 0 else 'arousal' if weight == 1 else 'blended'
 
     checkpoint_callback = CheckpointCallback(
@@ -108,5 +104,5 @@ if __name__ == "__main__":
         device='cuda',
     )
 
-    model.learn(total_timesteps=40000, callback=callbacks)
+    model.learn(total_timesteps=20000, callback=callbacks)
     model.save(f"./GANArousalAgents/PPO/cnn_ppo_{label}_{run}_extended")

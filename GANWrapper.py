@@ -2,10 +2,10 @@ from GANGenerate import generateNewLevel
 import numpy as np
 
 class GANWrapper:
-    def generate(self, vector, worker_id):
+    def generate(self, vector):
         try:
             values = vector.tolist()
-            level = generateNewLevel(values, worker_id)
+            level = generateNewLevel(values)
             return level.astype(np.int32)
         except Exception as e:
             return self._empty_level()

@@ -195,7 +195,7 @@ def search(time_limit_count, actions_data, env, pos_pool, best_pos, furthest_pos
     # print("env.episode_length: " + str(env.episode_length))
     # print("----<>")
 
-    while best_pos.reached_end_count == 0 and search_count <= 500 and time_limit_count <= 1200 and (len(pos_pool) != 0 and (((best_pos.pos_x - current_starting_pos_x) < max_right) or not current_good) and env.episode_length < 600):        
+    while best_pos.reached_end_count == 0 and search_count <= 500 and time_limit_count <= 150 and (len(pos_pool) != 0 and (((best_pos.pos_x - current_starting_pos_x) < max_right) or not current_good) and env.episode_length < 600):        
         # if (search_count % 50) == 0:
         #     print("search count: " + str(search_count))
 
@@ -395,7 +395,7 @@ class AstarAgent:
 
             # print("main_search_count: " + str(main_search_count))
 
-            if main_search_count >= 500 or main_search_count == 0 or main_time_limit_count >= 1200:
+            if main_search_count >= 500 or main_search_count == 0 or main_time_limit_count >= 150:
                 playable = False
                 print("Close 1")
                 main_env.env.close()
