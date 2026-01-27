@@ -38,8 +38,8 @@ class GANLevelEnv(gym.Env):
 
         self.segment_buffer = deque(maxlen=1)
 
-        self.observation_space = spaces.Box(low=-1, high=1, shape=((self.level_dim * 1) + 3 + 1,), dtype=np.float32)
-        self.action_space = spaces.Box(low=-1, high=1, shape=(self.level_dim,), dtype=np.float32)  # input vector for GAN
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(((self.level_dim * 2) * 1) + 3 + 1,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(self.level_dim * 2,), dtype=np.float32)  # input vector for GAN
 
         self.segment_count = 0
 
@@ -72,8 +72,14 @@ class GANLevelEnv(gym.Env):
         self.right_arousal_count = 0
 
         while len(self.action_list) <= 0:
-            self.current_action = np.random.uniform(-1, 1, size=self.level_dim)
-            self.current_segment = self.gan.generate(self.current_action)
+            action = np.random.uniform(-1, 1, size=(self.level_dim * 2))
+
+            action_1 = action[:self.level_dim]        # first 32 values
+            action_2 = action[self.level_dim:]
+
+            self.current_action = action
+
+            self.current_segment = self.gan.generate(action_1, action_2)
 
             self.playable, self.arousal_counter = self.reset_is_playable(self.current_segment)
 
@@ -96,6 +102,9 @@ class GANLevelEnv(gym.Env):
     def step(self, action):
         self.step_count += 1
         
+        action_1 = action[:self.level_dim]        # first 32 values
+        action_2 = action[self.level_dim:]
+
         self.current_action = action
         terminated = False
         truncated = False
@@ -103,7 +112,7 @@ class GANLevelEnv(gym.Env):
         self.segment_count += 1
 
         score = 0
-        self.current_segment = self.gan.generate(self.current_action)
+        self.current_segment = self.gan.generate(action_1, action_2)
 
         self.segment_buffer.append(self.current_segment)
 
@@ -180,7 +189,8 @@ class GANLevelEnv(gym.Env):
             print("EPISODE " + str(self.episode_count))
             print("LEVEL SCORE: " + str(self.score_count))
             print("LEVEL AROUSAL: " + str(self.total_arousal_count))
-            print("SECTION AROUSALS: " + str(self.left_arousal_count) + " : " + str(self.middle_arousal_count) + " : " + str(self.right_arousal_count))
+            print("LEVEL ENEMY: " + str(self.total_enemy_count))
+            # print("SECTION AROUSALS: " + str(self.left_arousal_count) + " : " + str(self.middle_arousal_count) + " : " + str(self.right_arousal_count))
             print("==============================")
             print("==============================")
 
@@ -251,19 +261,20 @@ class GANLevelEnv(gym.Env):
         side = self.segment_side(index)
 
         reward = 0
+        reward = (num_enemies / 7)
 
-        if index >= 0 and index < 4:
-            reward = arousal_counter
-            left = arousal_counter
-        elif index >= 4 and index < 8:
-            if arousal_counter == 0:
-                reward = 1
-            elif arousal_counter >= 1:
-                reward = 0
-            middle = arousal_counter
-        elif index >= 8:
-            reward = arousal_counter
-            right = arousal_counter
+        # if index >= 0 and index < 4:
+        #     reward = arousal_counter
+        #     left = arousal_counter
+        # elif index >= 4 and index < 8:
+        #     if arousal_counter == 0:
+        #         reward = 1
+        #     elif arousal_counter >= 1:
+        #         reward = 0
+        #     middle = arousal_counter
+        # elif index >= 8:
+        #     reward = arousal_counter
+        #     right = arousal_counter
         
         return reward, num_enemies, left, middle, right
     

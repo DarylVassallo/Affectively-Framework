@@ -586,6 +586,11 @@ class AstarAgent:
         # 37 - Player Death
 
 
+# cd C:\Users\Admin\Documents\GitHub\Affectively-Framework
+# conda activate unity_gym
+# python PPOAgent.py
+# 
+
 # cd C:\Users\vassa\Documents\GitHub\Affectively-Framework
 # conda activate unity_gym
 # python PPOAgent.py

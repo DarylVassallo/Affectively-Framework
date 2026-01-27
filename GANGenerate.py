@@ -66,7 +66,7 @@ def get_level(noise, to_string, name, size, width):
         return im[0:14, 0:width]
         # return im
     
-def get_random_long_level(values):
+def get_random_long_level(values_1, values_2):
     # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
     # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
     # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
@@ -74,8 +74,8 @@ def get_random_long_level(values):
     # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
     lvs = []
 
-    long_segment = get_level(values, False, './GAN/generator.pth', 1, 28)
-    short_segment = get_level(values, False, './GAN/generator.pth', 1, 13)
+    long_segment = get_level(values_1, False, './GAN/generator.pth', 1, 28)
+    short_segment = get_level(values_2, False, './GAN/generator.pth', 1, 28)
 
     # print("long_segment: " + str(long_segment))
     # print("short_segment: " + str(short_segment))
@@ -106,7 +106,7 @@ def repair():
 
     return level
 
-def generateNewLevel(values):
+def generateNewLevel(values_1, values_2):
     # destroyed_folder = os.path.join(os.path.dirname(__file__), "LevelGenerator", "GAN", "Destroyed")
     # if os.path.exists(destroyed_folder):
     #     for file in glob.glob(os.path.join(destroyed_folder, "*")):
@@ -132,7 +132,7 @@ def generateNewLevel(values):
 
     # lvs = []
 
-    lv = get_random_long_level(values)
+    lv = get_random_long_level(values_1, values_2)
 
     # cnt = calculate_broken_pipes(lv)
     # lvs.append((cnt, lv))
