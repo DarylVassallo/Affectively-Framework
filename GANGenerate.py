@@ -12,12 +12,14 @@ from stable_baselines3 import PPO
 import keyboard
 import shutil
 
-def get_level(noise, to_string, name, size):
+def get_level(noise, to_string, name, size, width):
     # print("noise: " + str(noise))
     # print("to_string: " + str(to_string))
     # print("name: " + str(name))
     # print("size: " + str(size))
-    width = 16
+    # print("get_level 1")
+    # size += 1
+    # width = 16 * 999
 
     model_to_load = name
     batch_size = 1
@@ -25,26 +27,74 @@ def get_level(noise, to_string, name, size):
     ngf = 64
     nz = 32
     z_dims = 10  # number different titles
+
+    # print("get_level 2")
+
     generator = Generator(nz, ngf, image_size, z_dims)
+
+    # print("get_level 2 - 1")
+
     generator.load_state_dict(torch.load(model_to_load, map_location=lambda storage, loc: storage))
+
+    # print("get_level 2 - 2")
+
     latent_vector = torch.FloatTensor(noise).view(batch_size, nz, 1, 1)
+
+    # print("get_level 3")
+
     with torch.no_grad():
         levels = generator(Variable(latent_vector))
     im = levels.data.cpu().numpy()
     im = np.argmax(im, axis=1)
     im = little_level(im[0], size)
+
+    # print("get_level 4")
+
     if to_string:
+        # print("im[0:14, 0:width]")
+        # print(str(im[0:14, 0:width]))
+        # print(str(im))
+
+        # print("get_level 5")
+
         return arr_to_str(im[0:14, 0:width])
+        # return arr_to_str(im)
     else:
+
+        # print("get_level 6")
+
         return im[0:14, 0:width]
+        # return im
     
 def get_random_long_level(values):
+    # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
+    # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
+    # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
+    # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
+    # print("STARTSTARTSTARTSTARTSTARTSTARTSTART")
     lvs = []
 
-    lvs.append(get_level(values, False, './GAN/generator.pth', 1))
+    long_segment = get_level(values, False, './GAN/generator.pth', 1, 28)
+    short_segment = get_level(values, False, './GAN/generator.pth', 1, 13)
+
+    # print("long_segment: " + str(long_segment))
+    # print("short_segment: " + str(short_segment))
+    # print("long_segment.shape: " + str(long_segment.shape))
+    # print("short_segment.shape: " + str(short_segment.shape))
+
+    lvs.append(np.concatenate([long_segment, short_segment],axis=1))
 
     lv = np.concatenate(lvs, axis=-1)
     lv = addLine(lv)
+
+    # print("lv:")
+    # print(str(lv))
+    
+    # print("ENDENDENDENDENDENDENDENDENDENDENDEND")
+    # print("ENDENDENDENDENDENDENDENDENDENDENDEND")
+    # print("ENDENDENDENDENDENDENDENDENDENDENDEND")
+    # print("ENDENDENDENDENDENDENDENDENDENDENDEND")
+    # print("ENDENDENDENDENDENDENDENDENDENDENDEND")
     return lv
 
 def repair():

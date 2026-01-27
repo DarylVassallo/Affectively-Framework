@@ -87,22 +87,34 @@ if __name__ == "__main__":
                             ])
 
 
-    policy_kwargs = dict(
-        features_extractor_class=CustomMLPExtractor,
-        features_extractor_kwargs=dict(features_dim=256),
-        net_arch = dict(pi=[256, 256], vf=[256, 256]),
-        activation_fn = torch.nn.ReLU,
-    )
+    # policy_kwargs = dict(
+    #     features_extractor_class=CustomMLPExtractor,
+    #     features_extractor_kwargs=dict(features_dim=256),
+    #     net_arch = dict(pi=[256, 256], vf=[256, 256]),
+    #     activation_fn = torch.nn.ReLU,
+    # )
 
-    model = PPO(
-        policy="MlpPolicy",
-        policy_kwargs=policy_kwargs,
+    # model = PPO(
+    #     policy="MlpPolicy",
+    #     policy_kwargs=policy_kwargs,
+    #     env=env,
+    #     verbose=1,
+    #     n_steps=64,
+    #     tensorboard_log="./Tensorboard/CNN/",
+    #     device='cuda',
+    # )
+
+    checkpoint_path = "./GANArousalAgents/PPO/cnn_ppo_optimize_1_6700_steps.zip"
+
+    model = PPO.load(
+        checkpoint_path,
         env=env,
-        verbose=1,
-        n_steps=64,
-        tensorboard_log="./Tensorboard/CNN/",
-        device='cuda',
+        device="cuda",
+        tensorboard_log="./Tensorboard/CNN/"
     )
+    model.verbose = 1
 
-    model.learn(total_timesteps=20000, callback=callbacks)
+    remaining_steps = 20000 - model.num_timesteps
+
+    model.learn(total_timesteps=remaining_steps, callback=callbacks, reset_num_timesteps=False)
     model.save(f"./GANArousalAgents/PPO/cnn_ppo_{label}_{run}_extended")

@@ -15,6 +15,7 @@ class AffectivelySideChannel(SideChannel, ABC):
 		"""
 		super().__init__(socket_id)
 		self.levelEnd = False
+		self.tiles_ready = False
 		self.arousal_vector = []
 	
 	def on_message_received(self,
@@ -26,8 +27,11 @@ class AffectivelySideChannel(SideChannel, ABC):
 			msg: The incoming message from the side channel.
 		"""
 		test = msg.read_string()
+		# print("MESSAGE: " + str(test))
 		self.levelEnd = False
 		
+		if test == '[Tiles Ready]':
+			self.tiles_ready = True
 		if test == '[Level Ended]':
 			self.levelEnd = True
 		elif '[Vector]' in test:

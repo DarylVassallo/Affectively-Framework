@@ -16,10 +16,17 @@ class Generator(nn.Module):
         :param n_add: number of additional stride-convolution layers
         :param ngpu: how many gpu to use
         """
+
+        # print("dcgan 1")
+
         super(Generator, self).__init__()
         self.ngpu = ngpu
+
+        # print("out_size: " + str(out_size))
         assert out_size % 16 == 0, 'output size must be divided by 16'
         main = nn.Sequential()
+
+        # print("dcgan 2")
 
         tmp = 4
         first_depth = final_depth
@@ -27,9 +34,13 @@ class Generator(nn.Module):
             tmp *= 2
             first_depth *= 2
 
+        # print("dcgan 3")
+
         main.add_module('pro:Net', nn.ConvTranspose2d(ns_size, first_depth, 4, 1, 0, bias=False))
         main.add_module('pro:BN', nn.BatchNorm2d(first_depth))
         main.add_module('pro:AcFunc', nn.ReLU(True))
+
+        # print("dcgan 4")
 
         # Transpose convolution layers to expand to the objective size.
         prev_depth = first_depth
@@ -43,6 +54,9 @@ class Generator(nn.Module):
             cnt += 1
             prev_depth //= 2
             prev_size *= 2
+
+        # print("dcgan 5")
+
         # Additional stride-convolution layers
         for i in range(n_add):
             main.add_module('add%d:Net' % (i+1),
@@ -50,9 +64,13 @@ class Generator(nn.Module):
             main.add_module('add%d:BN' % (i+1), nn.BatchNorm2d(prev_depth // 2))
             main.add_module('add%d:AcFunc' % (i+1), nn.ReLU(True))
 
+        # print("dcgan 6")
+
         # Output layer which use transpose convolution
         main.add_module('out:Net', nn.ConvTranspose2d(prev_depth, out_depth, 4, 2, 1, bias=False))
         main.add_module('out:AcFunc', nn.ReLU())
+
+        # print("dcgan 7")
 
         self.main = main
 

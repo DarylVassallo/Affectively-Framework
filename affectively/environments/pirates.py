@@ -1,6 +1,8 @@
 import numpy as np
 from affectively.environments.base import BaseEnvironment
 
+import keyboard
+
 class PiratesEnvironment(BaseEnvironment):
 
     reached_termination = False
@@ -14,13 +16,19 @@ class PiratesEnvironment(BaseEnvironment):
                          period_ra=period_ra, target_arousal=target_arousal, classifier=classifier, preference=preference)
 
     def reset_condition(self):
+        # print("self.can_end: " + str(self.can_end))
+        # if self.can_end == True:
         if self.customSideChannel.levelEnd:
             self.reached_termination = True
             self.reached_end_door = True
+            # print("LEVEL END")
+            # keyboard.wait("space") 
             # self.handle_level_end()
         if self.episode_length > 600:
             self.reached_termination = True
             self.reached_end_door = False
+            # print("TIME LIMIT")
+            # keyboard.wait("space") 
             # self.reset()
         # if self.episode_length > 6000 / self.decision_period:
         #     self.reset()
@@ -30,7 +38,7 @@ class PiratesEnvironment(BaseEnvironment):
         state = self.construct_state(state)
         return state
 
-    def step(self, action, save_load):
+    def step(self, action, save_load, using_arousal):
 
         # print("SAVE LOAD: " + str(save_load))
         # save_load = 0
@@ -48,11 +56,11 @@ class PiratesEnvironment(BaseEnvironment):
         # print("==========")
 
         # print("ACTION 2: " + str(transformed_action))
-        state, reward, d, info = super().step(transformed_action)
+        current_arousal, state, reward, d, info = super().step(transformed_action, using_arousal)
         grid = state[0]
         state = self.construct_state(state)
         self.reset_condition()
-        return grid, state, self.reached_termination, self.reached_end_door, reward, d, info
+        return current_arousal, grid, state, self.reached_termination, self.reached_end_door, reward, d, info
 
     def handle_level_end(self):
         print("End of level reached, resetting environment.")

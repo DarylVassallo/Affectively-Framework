@@ -17,6 +17,7 @@ from affectively.models.mlp_model import MLPSurrogateModel
 from affectively.utils.sidechannels import AffectivelySideChannel
 from affectively.models.linear_model import LinearSurrogateModel
 
+import keyboard
 
 def compute_confidence_interval(data, confidence: float = 0.95):
     data = np.array(data)
@@ -42,6 +43,8 @@ class BaseEnvironment(gym.Env, ABC):
         socket_id = uuid.uuid4()
 
         args += [f"-socketID", str(socket_id)]
+
+        self.can_end = False
 
         self.game_obs = []
         self.game = game
@@ -113,6 +116,9 @@ class BaseEnvironment(gym.Env, ABC):
         self.episode_length_list = {}
 
     def build_segment(self, segments):
+        # flat_info = "[Reset]:"
+        # self.create_and_send_message(flat_info)
+
         if isinstance(segments, np.ndarray) and segments.ndim == 2:
             segments = [segments]
 
@@ -123,6 +129,8 @@ class BaseEnvironment(gym.Env, ABC):
 
         flat_info = "[End]:"
         self.create_and_send_message(flat_info)
+
+        print("END BUILD SEGMENTS")
 
     def reset(self, **kwargs):
         if self.callback is not None and len(self.episode_arousal_trace) > 0:
@@ -211,17 +219,30 @@ class BaseEnvironment(gym.Env, ABC):
                 print(arousal)
             self.previous_surrogate = self.current_surrogate.copy()
             self.customSideChannel.arousal_vector.clear()
+        # print("AROUSAL: " + str(arousal))
+
+        # if arousal > 0:
+        #     print("GENERATE stacked_surrogates: " + str(stacked_surrogates))
+        #     print("GENERATE self.current_surrogate: " + str(self.current_surrogate))
+        #     print("GENERATE tensor: " + str(tensor))
+        #     print("GENERATE arousal: " + str(arousal))
+        #     print("GENERATE self.episode_arousal_trace: " + str(self.episode_arousal_trace))
+        #     print("GENERATE self.period_arousal_trace: " + str(self.period_arousal_trace))
+        #     keyboard.wait("space") 
         return arousal
 
-    def step(self, action):
+    def step(self, action, using_arousal):
         if action[2] < 0:
             self.episode_length_list[abs(action[2])] = self.episode_length
         elif action[2] > 0:
             if self.episode_length_list.get(abs(action[2])) != None:
                 self.episode_length = self.episode_length_list.get(abs(action[2]))
 
-        self.episode_length += 1            
-        self.arousal_episode_length += 1
+        self.episode_length += 1  
+
+        if using_arousal:          
+            self.arousal_episode_length += 1
+
         # print("EPISODE LENGTH: " + str(self.episode_length))
         change_in_score = (self.current_score - self.previous_score)
         self.score_change = self.score_change or change_in_score > 0
@@ -239,13 +260,19 @@ class BaseEnvironment(gym.Env, ABC):
                 state[modality] = np.concatenate((state[modality], arousal_window))
                 break
 
-        self.surrogate_list.append(surrogate)
+        if using_arousal:
+            self.surrogate_list.append(surrogate)
+
         self.current_score = env_score  
 
-        if self.arousal_episode_length % 15 == 0:  # Read the surrogate vector on the 15th tick
-            self.generate_arousal()
-            self.arousal_episode_length = 0
-            self.surrogate_list.clear()
+        current_arousal = 0
+
+        if using_arousal:
+            if self.arousal_episode_length % 15 == 0:  # Read the surrogate vector on the 15th tick
+                current_arousal = self.generate_arousal()
+                self.arousal_episode_length = 0
+                self.surrogate_list.clear()
+
         final_reward = 0
 
         if self.period_ra and (len(self.episode_arousal_trace) > 0):
@@ -262,7 +289,7 @@ class BaseEnvironment(gym.Env, ABC):
                 self.callback.on_step()
 
             
-        return state, final_reward, done, info
+        return current_arousal, state, final_reward, done, info
 
     def handle_level_end(self):
         """

@@ -158,7 +158,8 @@ def generate_graph():
 
     # log_file = os.path.join( "ExperimentLogs", "Maximum_Enemy_Count_Logs", "enemy_count.txt" )
     # log_file = os.path.join( "ExperimentLogs", "Minimum_Enemy_Count_Logs", "enemy_count.txt" )
-    log_file = os.path.join( "ExperimentLogs", "Maximum_Enemy_Count_Logs", "enemy_count.txt" )
+    # log_file = os.path.join( "ExperimentLogs", "Maximum_Enemy_Count_Logs", "enemy_count.txt" )
+    log_file = os.path.join( "ExperimentLogs", "Maximum_Arousal_Logs", "arousal_count.txt" )
 
     values = []
 
@@ -174,6 +175,9 @@ def generate_graph():
                     continue
 
                 segment_count = int(parts[1])
+                # if parts[1] == True:
+                #     segment_count = segment_count + 1
+                
                 # if parts[1] == False:
                 #     segment_count = segment_count - 1
                 values.append(int(segment_count))
@@ -193,9 +197,43 @@ def generate_graph():
     plt.figure()
     plt.plot(x, smooth)
     plt.xlabel("Episode")
-    plt.ylabel("Enemy Count")
-    plt.title("Smoothed Progression of Number of Enemies per Episode")
+    plt.ylabel("Arousal Value")
+    plt.title("Smoothed Progression of Arousal Value (generated per step) per Episode")
     plt.show()
+
+def evaluate_model():
+    env = GANLevelEnv()
+
+    # policy_kwargs = dict(
+    #     features_extractor_class=CustomMLPExtractor,
+    #     features_extractor_kwargs=dict(features_dim=256),
+    #     net_arch = dict(pi=[256, 256], vf=[256, 256]),
+    #     activation_fn = torch.nn.ReLU,
+    # )
+    
+    # model = PPO(
+    #     policy="MlpPolicy",
+    #     policy_kwargs=policy_kwargs,
+    #     env=env,
+    #     verbose=1,
+    #     n_steps=64,
+    #     tensorboard_log="./Tensorboard/CNN/",
+    #     device='cuda',
+    # )
+
+    model = PPO.load("GANArousalAgents/Maximum_Arousal_Agents/cnn_ppo_optimize_1_extended.zip", env=env)
+
+    for j in range(100):
+        print("EPISODE " + str(j))
+        obs, info = env.reset()
+        
+        all_actions = []
+        for i in range(11):
+            print("i number: " + str(i))
+
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, terminated, truncated, info = env.step(action)
+
 
 def generate_action_value_graph():
     env = GANLevelEnv()
@@ -273,7 +311,8 @@ def unity_generate_level():
     # )
 
     # model = PPO.load("GANArousalAgents\Maximum_Enemy_Count_Models\cnn_ppo_optimize_1_extended", env=env)
-    
+    # model = PPO.load("GANArousalAgents\PPO\cnn_ppo_optimize_1_extended", env=env)
+    model = PPO.load("GANArousalAgents\Maximum_Arousal_Agents\cnn_ppo_optimize_1_extended", env=env)
 
     # model = PPO.load("GANArousalAgents/MultipleValuesWithoutPlayability", env=env)
     # GANArousalAgents\multipleenemieswithoutplayabilityv2.zip
@@ -283,7 +322,7 @@ def unity_generate_level():
     
     # model = PPO.load("GANArousalAgents/MaxEnemyV2/cnn_ppo_optimize_1_100_steps.zip", env=env)
 
-    model = PPO.load("GANArousalAgents\Minimum_Enemy_Count_Models\cnn_ppo_optimize_1_extended.zip", env=env)
+    # model = PPO.load("GANArousalAgents\higharousal\cnn_ppo_optimize_1_extended.zip", env=env)
     # model = PPO.load("GANArousalAgents\PPO\cnn_ppo_optimize_1_17300_steps.zip", env=env)
 
     # model = PPO.load("GANArousalAgents\Minimum_Enemy_Count_Models\cnn_ppo_optimize_1_extended.zip", env=env)
@@ -315,16 +354,16 @@ def unity_generate_level():
 
         # if i >= 6 and i <= 8:
         segment = info["segment"]         # numpy array
-        enemy_count = info["enemy_count"]
+        # enemy_count = info["enemy_count"]
 
         # print("")
         # print("Segment " + str(i + 1) + ": " + str(segment))
         # print("====================")
 
-        print("i: " + str(i) + ", enemy_count: " + str(enemy_count))
+        # print("i: " + str(i) + ", enemy_count: " + str(enemy_count))
         # if enemy_count > 0:
-        print("segment:")
-        print(str(segment))
+        # print("segment:")
+        # print(str(segment))
             
         print("results_path: " + str(results_path))
         file_path = os.path.join(results_path, f"segment_{i+1 + 1}.csv")
@@ -355,4 +394,6 @@ def unity_generate_level():
     plt.show()
 
 if __name__ == '__main__':
-    generate_graph()
+    # unity_generate_level()
+    # generate_graph()
+    evaluate_model()

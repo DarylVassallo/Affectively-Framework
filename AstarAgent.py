@@ -17,11 +17,6 @@ import time
 import random
 from collections import deque
 
-# from stable_baselines3 import PPO
-# from GANEnv import GANLevelEnv
-# from CNet.model import CNet
-
-# Install pathfinding if it's not already installed
 try:
     import pathfinding
     import keyboard
@@ -43,71 +38,37 @@ from helper import Helper
 
 import matplotlib.pyplot as plt
 
-# def extract_plan(actions_data, best_pos, require_replanning):
-#     actions = []
-#     save_nums = []
-#     pos_x = []
-#     if best_pos == None:
-#         for i in range(10):
-#             actions.append(actions_data["move_right"]["action"])
-#             save_nums.append(0)
-#             pos_x.append(1)
-#         return actions, save_nums, pos_x, require_replanning
-    
-#     current = best_pos
-#     while current.parent != None:
-#         for i in range(current.repetitions):
-#             actions.append(current.action)
-#             save_nums.append(current.save_num)
-#             pos_x.append(current.pos_x)
-
-#         if current.state[19] > 0 or current.state[37] > 0:
-#             require_replanning = True
-        
-#         current = current.parent
-
-#     actions.reverse()
-#     save_nums.reverse()
-#     pos_x.reverse()
-
-#     return actions, save_nums, pos_x, require_replanning
-
-def extract_plan(actions_data, best_pos, require_replanning):
+def extract_plan(time_limit_count, search_count, actions_data, best_pos, require_replanning):
+    nodes = []
     actions = []
     save_nums = []
     pos_x = []
-    if best_pos == None:
-        for i in range(10):
-            actions.append(actions_data["move_right"]["action"])
-            save_nums.append(0)
-            pos_x.append(1)
-        return actions, save_nums, pos_x, require_replanning
     
-    current = best_pos
-    while current.parent != None:
-        for i in range(current.repetitions):
-            actions.append(current.action)
-            save_nums.append(current.save_num)
-            pos_x.append(current.pos_x)
+    if time_limit_count < 250 and search_count < 50:
+        current = best_pos
+        while current.parent != None:
+            for i in range(current.repetitions):
+                nodes.append(current)
+                actions.append(current.action)
+                save_nums.append(current.save_num)
+                pos_x.append(current.pos_x)
 
-        if current.state[19] > 0 or current.state[37] > 0:
-            require_replanning = True
-        
-        current = current.parent
+            if current.state[19] > 0 or current.state[37] > 0:
+                require_replanning = True
+            
+            current = current.parent
 
-    actions.reverse()
-    save_nums.reverse()
-    pos_x.reverse()
+        nodes.reverse()
+        actions.reverse()
+        save_nums.reverse()
+        pos_x.reverse()
 
-    return require_replanning
+    return nodes, actions, save_nums, require_replanning
 
 def start_search(pos_pool, visited_states, env, dist_x, dist_y, damage, death, starting_state, starting_save_num, latest_save_num, starting_repetitions):
-    # print("start dist_x: " + str(dist_x))
-    # keyboard.wait("space")
     if death > 0 or damage > 0:
         print("death: " + str(death))
         print("damage: " + str(damage))
-        # keyboard.wait("space")
 
     if len(pos_pool) == 0:
         start_pos = AStarNode   (  
@@ -123,12 +84,6 @@ def start_search(pos_pool, visited_states, env, dist_x, dist_y, damage, death, s
                                 )
         
         start_pos.initialize_root(starting_state, starting_save_num)
-    
-        # print("pos_pool: " + str(pos_pool))
-        # print("visited_states: " + str(visited_states))
-        # pos_pool = []
-        # visited_states = []
-
     
         children, latest_save_num = start_pos.generate_children(env, starting_save_num, latest_save_num)
 
@@ -184,21 +139,10 @@ def search(time_limit_count, actions_data, env, pos_pool, best_pos, furthest_pos
     max_right = 20
     search_count = 0
 
-    # print("----<>")
-    # print("best_pos.reached_end_count: " + str(best_pos.reached_end_count))
-    # print("search_count: " + str(search_count))
-    # print("len(pos_pool): " + str(len(pos_pool)))
-    # print("best_pos.pos_x: " + str(best_pos.pos_x))
-    # print("current_starting_pos_x: " + str(current_starting_pos_x))
-    # print("max_right: " + str(max_right))
-    # print("current_good: " + str(current_good))
-    # print("env.episode_length: " + str(env.episode_length))
-    # print("----<>")
-
-    while best_pos.reached_end_count == 0 and search_count <= 500 and time_limit_count <= 150 and (len(pos_pool) != 0 and (((best_pos.pos_x - current_starting_pos_x) < max_right) or not current_good) and env.episode_length < 600):        
-        # if (search_count % 50) == 0:
-        #     print("search count: " + str(search_count))
-
+    while best_pos.reached_end_count == 0 and search_count <= 50 and time_limit_count <= 250 and (len(pos_pool) != 0 and (((best_pos.pos_x - current_starting_pos_x) < max_right) or not current_good) and env.episode_length < 600):        
+        if (search_count % 50) == 0:
+            print("search_count limit count: " + str(search_count))
+        
         if (time_limit_count % 50) == 0:
             print("time limit count: " + str(time_limit_count))
             
@@ -209,18 +153,6 @@ def search(time_limit_count, actions_data, env, pos_pool, best_pos, furthest_pos
         
         current_good = False
         real_remaining_time, latest_save_num = current.simulate_pos(env, latest_save_num, original_save_num, original_dist_x, original_dist_y, original_damage, original_death, original_score, original_kill_count, best_pos.remaining_time_estimated)
-            
-        # if best_pos.remaining_time_estimated > current.remaining_time_estimated:
-        #     print("Remained Better")
-        #     print(str(extract_plan(actions_data, current, require_replanning)))
-        #     print("") 
-
-        #     if current.damage == 0 and current.death == 0:
-        #         print("no damage")
-        #     if current_good:
-        #         print("current_good")
-
-        #     keyboard.wait("space")
 
         check_condition = -1
 
@@ -240,13 +172,6 @@ def search(time_limit_count, actions_data, env, pos_pool, best_pos, furthest_pos
             current.is_in_visited_list = True
             heapq.heappush(pos_pool, (current.calculate_cost(), current))
         else:
-            # if current_good:
-            #     if current.damage == 0 and current.death == 0:
-            #         if best_pos.remaining_time_estimated > current.remaining_time_estimated:
-            #             print("Current changed")
-            #             print(str(extract_plan(actions_data, current, require_replanning)))
-            #             keyboard.wait("space")
-
             check_condition = 4
             current_good = True
             visited_states = visited(current.pos_x, current.pos_y, current.time_elapsed, visited_states)
@@ -260,13 +185,13 @@ def search(time_limit_count, actions_data, env, pos_pool, best_pos, furthest_pos
             if current.damage == 0 and current.death == 0:
                 if best_pos.remaining_time_estimated > current.remaining_time_estimated or current.reached_end_count > 0:
                     best_pos = current
-                    # print("Search Count Reset")
+
+                    # print("CURRENT BEST POS: " + str(best_pos.action))
+                    # n, a, s, _ = extract_plan(time_limit_count, actions_data, best_pos, require_replanning)
+                    # print("EXTRACT ACTIONS: " + str(a))
+                    # print("EXTRACT SAVE NUMS: " + str(s))
+                    # print("---")
                     search_count = 0
-                    # print("Best changed")
-                    # print("best_pos.pos_x: " + str(best_pos.pos_x))
-                    # # print(str(extract_plan(actions_data, best_pos, require_replanning)))
-                    # print("=========") 
-                    # keyboard.wait("space")
 
             if current.pos_x > furthest_pos.pos_x:
                 furthest_pos = current
@@ -277,7 +202,13 @@ def search(time_limit_count, actions_data, env, pos_pool, best_pos, furthest_pos
     if (current.pos_x - current_starting_pos_x) < max_right and furthest_pos.pos_x > best_pos.pos_x + 20:
         best_pos = furthest_pos
 
-    # print("best_pos: " + str(best_pos))
+    # print("search time_limit_count: " + str(time_limit_count))
+    # print("search search_count: " + str(search_count))
+    # print("search best_pos: " + str(best_pos))
+    # print("search furthest_pos: " + str(furthest_pos))
+    # print("search pos_pool: " + str(pos_pool))
+    # print("search visited_states: " + str(visited_states))
+    # print("search latest_save_num: " + str(latest_save_num))
     return time_limit_count, search_count, best_pos, furthest_pos, pos_pool, visited_states, latest_save_num
 
 def optimise(time_limit_count, pos_pool, visited_states, actions_data, env, original_state, original_save_num, original_dist_x, original_dist_y, original_damage, original_death, original_score, original_kill_count):
@@ -296,9 +227,9 @@ def optimise(time_limit_count, pos_pool, visited_states, actions_data, env, orig
 
     time_limit_count, search_count, best_pos, furthest_pos, pos_pool, visited_states, latest_save_num = search(time_limit_count, actions_data, env, pos_pool, best_pos, furthest_pos, current_starting_pos_x, latest_save_num, visited_states, require_replanning, original_save_num, original_dist_x, original_dist_y, original_damage, original_death, original_score, original_kill_count)
     
-    # require_replanning = extract_plan(actions_data, best_pos, require_replanning)
+    nodes_list, actions_list, save_list, require_replanning = extract_plan(time_limit_count, search_count, actions_data, best_pos, require_replanning)
 
-    return time_limit_count, search_count, best_pos, latest_save_num, pos_pool, visited_states
+    return nodes_list, actions_list, save_list, time_limit_count, search_count, best_pos, latest_save_num, pos_pool, visited_states
 
 class AstarAgent:    
     # cwd: c:\Users\vassa\Documents\GitHub\Affectively-Framework
@@ -321,7 +252,25 @@ class AstarAgent:
     # algorithm: PPO
     # policy: MlpPolicy
 
-    def AStarRun(self, segments) :
+    def AStarRun(self, segments, game_env) :
+        # game_env = None
+        
+        main_actions_data = {
+            "stay_still": {"action": (1, 0, 0), "score": 0},
+            "move_left": {"action": (0, 0, 0), "score": 0},
+            "move_right": {"action": (2, 0, 0), "score": 0},
+            "jump_straight": {"action": (1, 1, 0), "score": 0},
+            "jump_left": {"action": (0, 1, 0), "score": 0},
+            "jump_right": {"action": (2, 1, 0), "score": 0},
+        }
+
+        # if game_env is not None:
+        #     game_env.customSideChannel.tiles_ready = False
+        #     game_env.step(main_actions_data["stay_still"]["action"], 1, False)
+            
+        # print("AStarRun")
+        # keyboard.wait("space")
+
         weight = 0.5
         target_arousal = 1
         cluster = 0
@@ -332,7 +281,8 @@ class AstarAgent:
         use_gpu = 0
         classifier = 1
         preference = 1
-
+        
+        temp_state = None
         main_env = PiratesEnvironmentGameObs(
             id_number=1,
             weight=weight,
@@ -344,35 +294,70 @@ class AstarAgent:
             classifier=classifier,
             preference=preference,
         )
+        
+        # if game_env is None:
+        #     main_env = PiratesEnvironmentGameObs(
+        #         id_number=1,
+        #         weight=weight,
+        #         graphics=True, # Pirates is bugged in headless, prevent it manually for now
+        #         cluster=cluster,
+        #         target_arousal=target_arousal,
+        #         period_ra=period_ra,
+        #         discretize=discretize,
+        #         classifier=classifier,
+        #         preference=preference,
+        #     )
+        # else:
+        #     game_env.reached_termination = False
+        #     game_env.reached_end_door = False
+        #     game_env.customSideChannel.levelEnd = False
+        #     temp_state = game_env.reset()
+            
+        #     main_env = game_env
 
+        #     # if main_env.reached_termination == True or main_env.reached_end_door == True or temp_state[37] > 0:
+        #     #     print("main_env.reached_termination: " + str(main_env.reached_termination))
+        #     #     print("main_env.reached_end_door: " + str(main_env.reached_end_door))
+        #     #     print("temp_state[37]: " + str(temp_state[37]))
+        #     #     keyboard.wait("space")
+        
         main_env.build_segment(segments)
-        
-        
-        main_actions_data = {
-            "stay_still": {"action": (1, 0, 0), "score": 0},
-            "move_left": {"action": (0, 0, 0), "score": 0},
-            "move_right": {"action": (2, 0, 0), "score": 0},
-            "jump_straight": {"action": (1, 1, 0), "score": 0},
-            "jump_left": {"action": (0, 1, 0), "score": 0},
-            "jump_right": {"action": (2, 1, 0), "score": 0},
-        }
 
+        main_env.reached_termination = False
+        main_env.reached_end_door = False
+        main_env.customSideChannel.levelEnd = False
         self.obs = main_env.reset()
-
-        # ganenv = GANLevelEnv()
-        # model = PPO.load("PPO/cnn_ppo_solid_optimize_1_extended.zip", env=ganenv)
-        # obs, info = ganenv.reset()
-        # action, _ = model.predict(obs, deterministic=True)
-        # obs, reward, terminated, truncated, info = ganenv.step(action)
-        # keyboard.wait("space")
         
         main_save_load_num = 0
 
         main_save_load_num += 1
-        main_env.step(main_actions_data["stay_still"]["action"], -main_save_load_num)
 
-        main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num)
+        # if game_env is None:
+        main_env.step(main_actions_data["stay_still"]["action"], -main_save_load_num, False)
         
+        # while True and game_env is not None:
+        #     main_env.step(main_actions_data["stay_still"]["action"], 1, False)
+            
+        #     main_env.reached_termination = False
+        #     main_env.reached_end_door = False
+        #     main_env.customSideChannel.levelEnd = False
+        #     self.obs = main_env.reset()
+
+        #     if main_env.customSideChannel.tiles_ready == True:
+        #         break
+
+        # if game_env is not None:
+        #     main_env.step(main_actions_data["stay_still"]["action"], -main_save_load_num, False)
+
+        # game_env = main_env
+
+        # print("AStarRun BEGIN")
+        # keyboard.wait("space")
+        
+        # print("Starting Load, num: " + str(main_save_load_num))
+        main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False)
+        # keyboard.wait("space")
+
         main_dist_x = 0
         main_dist_y = 0
         main_damage = 0
@@ -380,6 +365,7 @@ class AstarAgent:
         main_score = 0
         main_kill_count = 0
         main_time_limit_count = 0
+        main_search_count = 0
 
         main_pos_pool = []
         main_visited_states = []
@@ -387,155 +373,179 @@ class AstarAgent:
         while True:   
             main_new_save_load_num = main_save_load_num
 
-            # print("LOAD TO START")
-            main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num)
-            # keyboard.wait("space")
+            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False)
 
-            main_time_limit_count, main_search_count, main_best_pos, main_new_save_load_num, main_pos_pool, main_visited_states = optimise(main_time_limit_count, main_pos_pool, main_visited_states, main_actions_data, main_env, main_state, main_new_save_load_num, main_dist_x, main_dist_y, main_damage, main_death, main_score, main_kill_count)
+            main_nodes_list, main_actions_list, main_save_list, main_time_limit_count, main_search_count, main_best_pos, main_new_save_load_num, main_pos_pool, main_visited_states = optimise(main_time_limit_count, main_pos_pool, main_visited_states, main_actions_data, main_env, main_state, main_new_save_load_num, main_dist_x, main_dist_y, main_damage, main_death, main_score, main_kill_count)
 
-            # print("main_search_count: " + str(main_search_count))
-
-            if main_search_count >= 500 or main_search_count == 0 or main_time_limit_count >= 150:
+            if main_search_count >= 50 or main_search_count == 0 or main_time_limit_count >= 250:
                 playable = False
                 print("Close 1")
                 main_env.env.close()
-                return playable, main_dist_x
+                # main_env.step(main_actions_data["stay_still"]["action"], 1, False)
+                # main_env.reached_termination = False
+                # main_env.reached_end_door = False
+                # main_env.customSideChannel.levelEnd = False
+                # main_env.reset()
+                # keyboard.wait("space")  
+                return playable, main_dist_x, 0, game_env
             
-            # print("MOVE")
-            # print("LOAD TO START")
-            main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num)
-            # keyboard.wait("space")
+            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False)
 
-            if main_best_pos == None:
-                test = 1
-                # # print("1 LOAD MOVE: Stay Still")
-                # main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num)
-                # # keyboard.wait("space")
-
-                # main_dist_x += main_state[0]
-                # # print("1 Dist X: " + str(main_dist_x))
-                # main_dist_y += main_state[1]
-                # main_damage += main_state[19]
-                # main_death += main_state[37]
-
-                # main_score = main_state[7]
-                # main_kill_count = main_state[23]
-
-                # # print("1 SAVE")
-                # main_new_save_load_num += 1
-                # main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], -main_new_save_load_num)
-                # # keyboard.wait("space")
-
-                # if main_reached_termination or main_death > 0:
-                #     # print("TERMINATION 1")
-                #     # print("main_reached_termination: " + str(main_reached_termination))
-                #     # print("main_death: " + str(main_death))
-
-                #     # if main_death > 0:
-                #     #     print("TERMINATION 1")
-                #     #     keyboard.wait("space")
-                        
-                #     playable = True
-
-                #     if main_reached_end_door == False:
-                #         playable = False
-
-                #     print("Close 2")
-                #     main_env.env.close()
-
-                #     return playable, main_dist_x
-            else:
-                main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_best_pos.action, main_best_pos.save_num)
+            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_best_pos.action, main_best_pos.save_num, False)
                 
-                main_dist_x = main_best_pos.pos_x
-                main_dist_y = main_best_pos.pos_y
-                main_damage += main_best_pos.damage
-                main_death += main_best_pos.death
+            main_dist_x = main_best_pos.pos_x
+            main_dist_y = main_best_pos.pos_y
+            main_damage += main_best_pos.damage
+            main_death += main_best_pos.death
 
-                main_score = main_best_pos.score_difference
-                main_kill_count = main_best_pos.kill_count_difference
+            main_score = main_best_pos.score_difference
+            main_kill_count = main_best_pos.kill_count_difference
 
-                # keyboard.wait("space")   
+            # keyboard.wait("space")   
 
-                if main_reached_termination or main_death > 0:
-                    # print("TERMINATION 2")
-                    # print("main_reached_termination: " + str(main_reached_termination))
-                    # print("main_death: " + str(main_death))
+            if main_reached_termination:
+                playable = True
 
-                    # if main_death > 0:
-                    #     print("TERMINATION 2")
-                    #     keyboard.wait("space")
+                main_env.can_end = True
 
-                    playable = True
+                main_env.reached_termination = False
+                main_env.reached_end_door = False
+                main_env.reset()
+                main_env.customSideChannel.levelEnd = False
 
-                    if main_reached_end_door == False:
-                        playable = False
+                action_count = 0
+                arousal_counter = 0
 
-                    print("Close 3")
-                    main_env.env.close()
+                tick_counter = 0
+                for i, part_node in enumerate(main_nodes_list):
+                    if part_node.save_num:
+                        if action_count == 0:
+                            main_env.reached_termination = False
+                            main_env.reached_end_door = False
+                            main_env.customSideChannel.levelEnd = False
 
-                    return playable, main_dist_x 
+                            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(part_node.action, 1, True)
+                            main_env.reached_termination = False
+                            main_env.reached_end_door = False
+                            main_reached_termination = False
+                            main_env.customSideChannel.levelEnd = False
+                        else:
+                            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(part_node.action, part_node.save_num, True)
+                        
+                        tick_counter += 1
 
-            # print("SAVE")
+                        # print("MAIN AROUSAL: " + str(main_arousal))
+                        arousal_counter += main_arousal
+                        # print("AROUSAL: " + str(arousal_counter))
+
+                        # if main_arousal > 0:
+                        #     print("MAIN AROUSAL: " + str(main_arousal))
+                        #     keyboard.wait("space") 
+
+                        action_count += 1
+
+                        main_dist_x += main_state[0]
+                        main_dist_y += main_state[1]
+                        main_damage += main_state[19]
+                        main_death += main_state[37] 
+
+                        main_score = main_state[7]
+                        main_kill_count = main_state[23]
+
+                        # keyboard.wait("space")    
+
+                        # if main_reached_termination or main_death > 0:
+                        #     # print("TERMINATION 2")
+                        #     # print("main_reached_termination: " + str(main_reached_termination))
+                        #     # print("main_death: " + str(main_death))
+                        #     playable = True
+
+                        #     if main_reached_end_door == False:
+                        #         playable = False
+
+                        #     main_env.env.close()
+
+                        #     print("FINAl AROUSAL: " + str(arousal_counter))
+                        #     print("FINAL TICK: " + str(tick_counter))
+                        #     # keyboard.wait("space") 
+                        #     # main_env.step(main_actions_data["stay_still"]["action"], 1, False)
+                        #     # main_env.reached_termination = False
+                        #     # main_env.reached_end_door = False
+                        #     # main_env.customSideChannel.levelEnd = False
+                        #     # main_env.reset()
+                        #     # keyboard.wait("space")  
+                        #     return playable, main_dist_x, arousal_counter, game_env
+
+                print("END OF RUN")
+                print("main_reached_termination: " + str(main_reached_termination))
+                # keyboard.wait("space")
+                print("---------------")
+
+                playable = True
+
+                # if main_reached_end_door == False:
+                #     playable = False
+
+                main_env.env.close()
+
+                print("FINAl AROUSAL: " + str(arousal_counter))
+                print("FINAL TICK: " + str(tick_counter))
+                # keyboard.wait("space") 
+                # main_env.step(main_actions_data["stay_still"]["action"], 1, False)
+                # main_env.reached_termination = False
+                # main_env.reached_end_door = False
+                # main_env.customSideChannel.levelEnd = False
+                # main_env.reset()
+                # keyboard.wait("space")  
+                return playable, main_dist_x, arousal_counter, game_env
+
             main_new_save_load_num += 1  
-            main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], -main_new_save_load_num)
-            # keyboard.wait("space")
+
+            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], -main_new_save_load_num, False)
             
-            if main_reached_termination or main_death > 0:
-                # print("TERMINATION 3")
-                # print("main_reached_termination: " + str(main_reached_termination))
-                # print("main_death: " + str(main_death))
+            # if main_reached_termination or main_death > 0:
+            #     playable = True
 
-                # if main_death > 0:
-                #     print("TERMINATION 3")
-                #     keyboard.wait("space")
+            #     if main_reached_end_door == False:
+            #         playable = False
 
-                playable = True
+            #     print("Close 4")
+            #     main_env.env.close()
 
-                if main_reached_end_door == False:
-                    playable = False
-
-                print("Close 4")
-                main_env.env.close()
-
-                return playable, main_dist_x
+            #     return playable, main_dist_x
             
-            # print("LOAD NEW MOVE")
             main_save_load_num = main_new_save_load_num
-            test_raw_grid, test_state, test_reached_termination, test_reached_end_door, test_reward, test_done, test_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num) 
-            # keyboard.wait("space") 
+
+            test_arousal, test_raw_grid, test_state, test_reached_termination, test_reached_end_door, test_reward, test_done, test_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False) 
             
-            if main_reached_termination and main_death > 0:
-                # if main_death > 0:
-                #     print("TERMINATION 4")
-                #     keyboard.wait("space")
+            # if main_reached_termination and main_death > 0:
+            #     playable = True
 
-                playable = True
+            #     if main_reached_end_door == False:
+            #         playable = False
 
-                if main_reached_end_door == False:
-                    playable = False
+            #     print("Close 5")
+            #     main_env.env.close()
 
-                print("Close 5")
-                main_env.env.close()
-
-                return playable, main_dist_x
+            #     return playable, main_dist_x
             
             print("Distance Travelled: " + str(main_dist_x))
 
-            if main_reached_termination and main_death > 0:
-                playable = True
+            # if main_reached_termination and main_death > 0:
+            #     playable = True
 
-                if main_reached_end_door == False:
-                    playable = False
+            #     if main_reached_end_door == False:
+            #         playable = False
 
-                print("Close 6")
-                main_env.env.close()
+            #     print("Close 6")
+            #     main_env.env.close()
 
-                return playable, main_dist_x
+            #     return playable, main_dist_x
             
             print("MOVED")
             print("******************************************")
             # keyboard.wait("space")
+
         # 0 - (transform.position - previousPosition).x
         # 1 - (transform.position - previousPosition).y
         # 2 - _corgiController.Speed.x

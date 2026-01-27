@@ -23,6 +23,8 @@ class GANLevelEnv(gym.Env):
     def __init__(self, gan_model=GANWrapper(), level_dim=32):
         super().__init__()
 
+        self.game_env = None
+
         self.episode_count = 0
         self.step_count = 0
 
@@ -34,7 +36,7 @@ class GANLevelEnv(gym.Env):
         self.action_list = deque(maxlen=1)
         self.observation = None
 
-        self.segment_buffer = deque(maxlen=2)
+        self.segment_buffer = deque(maxlen=1)
 
         self.observation_space = spaces.Box(low=-1, high=1, shape=((self.level_dim * 1) + 3 + 1,), dtype=np.float32)
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.level_dim,), dtype=np.float32)  # input vector for GAN
@@ -60,15 +62,20 @@ class GANLevelEnv(gym.Env):
         self.score_count = 0
 
         self.total_enemy_count = 0
-        self.left_enemy_count = 0
-        self.middle_enemy_count = 0
-        self.right_enemy_count = 0
+        # self.left_enemy_count = 0
+        # self.middle_enemy_count = 0
+        # self.right_enemy_count = 0
+
+        self.total_arousal_count = 0
+        self.left_arousal_count = 0
+        self.middle_arousal_count = 0
+        self.right_arousal_count = 0
 
         while len(self.action_list) <= 0:
             self.current_action = np.random.uniform(-1, 1, size=self.level_dim)
             self.current_segment = self.gan.generate(self.current_action)
 
-            self.playable = self.reset_is_playable(self.current_segment)
+            self.playable, self.arousal_counter = self.reset_is_playable(self.current_segment)
 
             if self.playable:        
                 for i in range(1):
@@ -112,15 +119,27 @@ class GANLevelEnv(gym.Env):
 
             return self._get_observation_stack(), reward, terminated, False, info
 
-        self.playable = self.is_playable(self.segment_buffer)
+        self.playable, self.arousal_counter = self.is_playable(self.segment_buffer)
+        # print("ENV self.arousal_counter: " + str(self.arousal_counter))
 
-        score, enemy_count, left_count, middle_count, right_count = self.reward(self.current_segment, self.segment_count, self.step_count)
 
+        # score, enemy_count, left_count, middle_count, right_count = self.reward(self.current_segment, self.segment_count, self.step_count)
+        score, enemy_count, left_count, middle_count, right_count = self.reward(self.arousal_counter, self.current_segment, self.segment_count)
+
+        print("STEP, PLAYABLE: " + str(self.playable) + ", AROUSALS: (" + str(left_count) + " : " + str(middle_count) + " : " + str(right_count) + "), SCORE: " + str(score))
+        print("==========")
         self.score_count += score
         self.total_enemy_count += enemy_count
-        self.left_enemy_count += left_count
-        self.middle_enemy_count += middle_count
-        self.right_enemy_count += right_count  
+        # self.left_enemy_count += left_count
+        # self.middle_enemy_count += middle_count
+        # self.right_enemy_count += right_count  
+
+        self.total_arousal_count += self.arousal_counter
+        self.left_arousal_count += left_count
+        self.middle_arousal_count += middle_count
+        self.right_arousal_count += right_count  
+
+        # print("ENV self.total_arousal_count: " + str(self.total_arousal_count))
 
         self.action_list.append(self.current_action)    
         side_info = self.segment_side(self.segment_count).astype(np.float32)
@@ -131,13 +150,21 @@ class GANLevelEnv(gym.Env):
         info = {"segment": self.current_segment,
                 "full_level": self.segment_buffer,
                 "enemy_count": enemy_count,}
+
+        # info = {"segment": self.current_segment,
+        #         "full_level": self.segment_buffer,}
         
         if not self.playable or (self.segment_count + 1) >= self.step_max_count:
             with open(self.playable_file, "a", encoding="utf-8") as f:
                 f.write("Episode " + str(self.episode_count) + " : " + str(self.playable) + " : " + str(self.segment_count) + "\n")
 
             with open(self.enemy_count_file, "a", encoding="utf-8") as f:
-                f.write("Episode " + str(self.episode_count) + " : " + str(self.left_enemy_count) + " : " + str(self.middle_enemy_count) + " : " + str(self.right_enemy_count) + "\n")
+                f.write("Episode " + str(self.episode_count) + " : " + str(self.total_enemy_count) + "\n")
+                # f.write("Episode " + str(self.episode_count) + " : " + str(self.left_enemy_count) + " : " + str(self.middle_enemy_count) + " : " + str(self.right_enemy_count) + "\n")
+
+            with open(self.arousal_file, "a", encoding="utf-8") as f:
+                f.write("Episode " + str(self.episode_count) + " : " + str(self.left_arousal_count) + " : " + str(self.middle_arousal_count) + " : " + str(self.right_arousal_count) + "\n")
+                # f.write("Episode " + str(self.episode_count) + " : " + str(self.total_arousal_count) + "\n")
 
             terminated = True
 
@@ -150,7 +177,10 @@ class GANLevelEnv(gym.Env):
             else:
                 print("PLAYABLE WITH " + str(self.segment_count) + " SEGMENTS")
 
+            print("EPISODE " + str(self.episode_count))
             print("LEVEL SCORE: " + str(self.score_count))
+            print("LEVEL AROUSAL: " + str(self.total_arousal_count))
+            print("SECTION AROUSALS: " + str(self.left_arousal_count) + " : " + str(self.middle_arousal_count) + " : " + str(self.right_arousal_count))
             print("==============================")
             print("==============================")
 
@@ -184,6 +214,7 @@ class GANLevelEnv(gym.Env):
 
         self.playable_file = os.path.join(self.log_dir, "playable_results.txt")
         self.enemy_count_file = os.path.join(self.log_dir, "enemy_count.txt")
+        self.arousal_file = os.path.join(self.log_dir, "arousal_count.txt")
         self.reward_file = os.path.join(self.log_dir, "reward.txt")
 
     def segment_side(self, segment_idx):        
@@ -195,22 +226,23 @@ class GANLevelEnv(gym.Env):
             return np.array([0, 0, 1], dtype=np.float32)  # right
         
     def reset_is_playable(self, segment):
-        # return True
+        # return True, 0
 
         agent = AstarAgent() 
-        playable, playable_distance = agent.AStarRun(segment)
-
-        return playable
+        playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
+        print("RESET, PLAYABLE: " + str(playable) + ", AROUSAL: " + str(arousal_counter))
+        print("==========")
+        return playable, arousal_counter
 
     def is_playable(self, segment):
-        # return True
+        # return True, 0
 
         agent = AstarAgent() 
-        playable, playable_distance = agent.AStarRun(segment)
+        playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
+        print("STEP")
+        return playable, arousal_counter
 
-        return playable
-
-    def reward(self, segment, index, step_count): 
+    def reward(self, arousal_counter, segment, index): 
         num_enemies = sum(np.count_nonzero(arr == 5) for arr in segment)
         left = 0
         middle = 0
@@ -221,16 +253,56 @@ class GANLevelEnv(gym.Env):
         reward = 0
 
         if index >= 0 and index < 4:
-            reward = (num_enemies / 7)
-            left = num_enemies
+            reward = arousal_counter
+            left = arousal_counter
         elif index >= 4 and index < 8:
-            reward = -(num_enemies / 7)
-            middle = num_enemies
+            if arousal_counter == 0:
+                reward = 1
+            elif arousal_counter >= 1:
+                reward = 0
+            middle = arousal_counter
         elif index >= 8:
-            reward = (num_enemies / 7)
-            right = num_enemies
+            reward = arousal_counter
+            right = arousal_counter
         
         return reward, num_enemies, left, middle, right
+    
+    # def reward(self, playable, arousal_counter, segment, index, step_count): 
+    #     num_enemies = sum(np.count_nonzero(arr == 5) for arr in segment)
+    #     # left = 0
+    #     # middle = 0
+    #     # right = 0
+
+    #     # side = self.segment_side(index)
+
+    #     # reward = 0
+
+    #     # if index >= 0 and index < 4:
+    #     #     reward = (num_enemies / 7)
+    #     #     left = num_enemies
+    #     # elif index >= 4 and index < 8:
+    #     #     reward = -(num_enemies / 7)
+    #     #     middle = num_enemies
+    #     # elif index >= 8:
+    #     #     reward = (num_enemies / 7)
+    #     #     right = num_enemies
+        
+    #     # return reward, num_enemies, left, middle, right
+
+    #     # reward = -num_enemies
+
+
+    #     reward = arousal_counter
+        
+    #     # if arousal_counter == 0:
+    #     #     reward = 1
+    #     # elif arousal_counter >= 1:
+    #     #     reward = 0
+
+    #     # if playable:
+    #     #     reward += 0.1
+
+    #     return reward, num_enemies
     
     def _get_observation_stack(self):
         return self.observation
