@@ -187,6 +187,7 @@ class GANLevelEnv(gym.Env):
                 print("PLAYABLE WITH " + str(self.segment_count) + " SEGMENTS")
 
             print("EPISODE " + str(self.episode_count))
+            print("CURRENT SCORE: " + str(score))
             print("LEVEL SCORE: " + str(self.score_count))
             print("LEVEL AROUSAL: " + str(self.total_arousal_count))
             print("LEVEL ENEMY: " + str(self.total_enemy_count))
@@ -197,8 +198,11 @@ class GANLevelEnv(gym.Env):
         self.total_score += score
 
         if terminated == True:
-            with open(self.reward_file, "a", encoding="utf-8") as f:
+            with open(self.reward_total_file, "a", encoding="utf-8") as f:
                 f.write("Episode " + str(self.episode_count) + " : " + str(self.score_count) + "\n")
+            
+            with open(self.reward_average_file, "a", encoding="utf-8") as f:
+                f.write("Episode " + str(self.episode_count) + " : " + str((self.score_count / (self.segment_count + 1))) + "\n")
         
         return self._get_observation_stack(), score, terminated, truncated, info
 
@@ -225,7 +229,8 @@ class GANLevelEnv(gym.Env):
         self.playable_file = os.path.join(self.log_dir, "playable_results.txt")
         self.enemy_count_file = os.path.join(self.log_dir, "enemy_count.txt")
         self.arousal_file = os.path.join(self.log_dir, "arousal_count.txt")
-        self.reward_file = os.path.join(self.log_dir, "reward.txt")
+        self.reward_total_file = os.path.join(self.log_dir, "reward_total.txt")
+        self.reward_average_file = os.path.join(self.log_dir, "reward_average.txt")
 
     def segment_side(self, segment_idx):        
         if segment_idx >= 0 and segment_idx < 4:
@@ -236,7 +241,7 @@ class GANLevelEnv(gym.Env):
             return np.array([0, 0, 1], dtype=np.float32)  # right
         
     def reset_is_playable(self, segment):
-        return True, 0
+        # return True, 0
 
         agent = AstarAgent() 
         playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
@@ -245,7 +250,7 @@ class GANLevelEnv(gym.Env):
         return playable, arousal_counter
 
     def is_playable(self, segment):
-        return True, 0
+        # return True, 0
 
         agent = AstarAgent() 
         playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
@@ -261,7 +266,10 @@ class GANLevelEnv(gym.Env):
         side = self.segment_side(index)
 
         reward = 0
-        reward = (num_enemies / 7)
+        # reward = num_enemies
+        reward = -num_enemies
+
+        # reward = (num_enemies / 7)
         # reward = -(num_enemies / 7)
 
         # if index >= 0 and index < 4:

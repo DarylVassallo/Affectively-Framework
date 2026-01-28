@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     checkpoint_callback = CheckpointCallback(
                                                 save_freq=500,
-                                                save_path="./GANArousalAgents/PPO/",
+                                                save_path="./GANArousalAgents/PPO/MinEnemy1/",
                                                 name_prefix=f"cnn_ppo_{label}_{run}"
                                             )
     
@@ -93,8 +93,8 @@ if __name__ == "__main__":
 
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path="./GANArousalAgents/PPO/best_model/",
-        log_path="./GANArousalAgents/PPO/eval_logs/",
+        best_model_save_path="./GANArousalAgents/PPO/MinEnemy1/best_model/",
+        log_path="./GANArousalAgents/PPO/MinEnemy1/eval_logs/",
         eval_freq=500,
         n_eval_episodes=5,
         deterministic=True,
@@ -139,4 +139,4 @@ if __name__ == "__main__":
     remaining_steps = 20000000
 
     model.learn(total_timesteps=remaining_steps, callback=callbacks, reset_num_timesteps=False)
-    model.save(f"./GANArousalAgents/PPO/cnn_ppo_{label}_{run}_extended")
+    model.save(f"./GANArousalAgents/PPO/MinEnemy1/cnn_ppo_{label}_{run}_extended")
