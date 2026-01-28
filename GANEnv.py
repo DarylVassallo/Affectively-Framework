@@ -181,7 +181,7 @@ class GANLevelEnv(gym.Env):
                 print("NOT PLAYABLE WITH " + str(self.segment_count) + " SEGMENTS")
 
                 self.score_count -= score
-                score = 0
+                score = score - (10 * (self.step_max_count - (self.segment_count + 1)))
 
             else:
                 print("PLAYABLE WITH " + str(self.segment_count) + " SEGMENTS")
@@ -236,7 +236,7 @@ class GANLevelEnv(gym.Env):
             return np.array([0, 0, 1], dtype=np.float32)  # right
         
     def reset_is_playable(self, segment):
-        # return True, 0
+        return True, 0
 
         agent = AstarAgent() 
         playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
@@ -245,7 +245,7 @@ class GANLevelEnv(gym.Env):
         return playable, arousal_counter
 
     def is_playable(self, segment):
-        # return True, 0
+        return True, 0
 
         agent = AstarAgent() 
         playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
@@ -262,6 +262,7 @@ class GANLevelEnv(gym.Env):
 
         reward = 0
         reward = (num_enemies / 7)
+        # reward = -(num_enemies / 7)
 
         # if index >= 0 and index < 4:
         #     reward = arousal_counter

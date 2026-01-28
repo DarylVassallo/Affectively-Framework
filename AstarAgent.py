@@ -591,6 +591,11 @@ class AstarAgent:
 # python PPOAgent.py
 # 
 
+# cd C:\Users\Admin\Documents\GitHub\Affectively-Framework\Tensorboard\CNN
+# conda activate unity_gym
+# tensorboard --logdir=C:\Users\Admin\Documents\GitHub\Affectively-Framework\Tensorboard\CNN
+# 
+
 # cd C:\Users\vassa\Documents\GitHub\Affectively-Framework
 # conda activate unity_gym
 # python PPOAgent.py

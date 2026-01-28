@@ -2,6 +2,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import ProgressBarCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
+from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnNoModelImprovement
 
 
 import torch
@@ -73,17 +74,37 @@ if __name__ == "__main__":
     env = GANLevelEnv()
     env = Monitor(env)
 
+    eval_env = GANLevelEnv()
+    eval_env = Monitor(env)
+
     label = 'optimize' if weight == 0 else 'arousal' if weight == 1 else 'blended'
 
     checkpoint_callback = CheckpointCallback(
                                                 save_freq=500,
-                                                save_path="./GANArousalAgents/PPO/MaxEnemy1/",
+                                                save_path="./GANArousalAgents/PPO/",
                                                 name_prefix=f"cnn_ppo_{label}_{run}"
                                             )
     
+    stop_train_callback = StopTrainingOnNoModelImprovement(
+        max_no_improvement_evals=3,
+        min_evals=3,
+        verbose=1
+    )
+
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path="./GANArousalAgents/PPO/best_model/",
+        log_path="./GANArousalAgents/PPO/eval_logs/",
+        eval_freq=500,
+        n_eval_episodes=5,
+        deterministic=True,
+        callback_after_eval=stop_train_callback
+    )
+    
     callbacks = CallbackList([
                                 ProgressBarCallback(),
-                                checkpoint_callback
+                                checkpoint_callback,
+                                eval_callback
                             ])
 
 
@@ -115,7 +136,7 @@ if __name__ == "__main__":
     # model.verbose = 1
 
     # remaining_steps = 20000 - model.num_timesteps
-    remaining_steps = 20000
+    remaining_steps = 20000000
 
     model.learn(total_timesteps=remaining_steps, callback=callbacks, reset_num_timesteps=False)
     model.save(f"./GANArousalAgents/PPO/cnn_ppo_{label}_{run}_extended")
