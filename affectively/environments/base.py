@@ -265,7 +265,8 @@ class BaseEnvironment(gym.Env, ABC):
 
         self.current_score = env_score  
 
-        current_arousal = 0
+        # current_arousal = 0
+        current_arousal = -1
 
         if using_arousal:
             if self.arousal_episode_length % 15 == 0:  # Read the surrogate vector on the 15th tick

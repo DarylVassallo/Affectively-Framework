@@ -266,8 +266,32 @@ class GANLevelEnv(gym.Env):
         side = self.segment_side(index)
 
         reward = 0
+
+        if index >= 0 and index < 4:
+            if arousal_counter == 0:
+                reward = 0
+                left = 0
+            else:
+                reward = arousal_counter
+                left = arousal_counter
+        elif index >= 4 and index < 8:
+            if arousal_counter == 0:
+                reward = 0
+                middle = 0
+            else:
+                reward = -arousal_counter
+                middle = arousal_counter
+        elif index >= 8:
+            if arousal_counter == 0:
+                reward = 0
+                right = 0
+            else:
+                reward = arousal_counter
+                right = arousal_counter
+        # reward = -arousal_counter
+
         # reward = num_enemies
-        reward = -num_enemies
+        # reward = -num_enemies
 
         # reward = (num_enemies / 7)
         # reward = -(num_enemies / 7)

@@ -419,6 +419,7 @@ class AstarAgent:
                 tick_counter = 0
                 for i, part_node in enumerate(main_nodes_list):
                     if part_node.save_num:
+                        main_arousal = -1
                         if action_count == 0:
                             main_env.reached_termination = False
                             main_env.reached_end_door = False
@@ -435,7 +436,11 @@ class AstarAgent:
                         tick_counter += 1
 
                         # print("MAIN AROUSAL: " + str(main_arousal))
-                        arousal_counter += main_arousal
+                        # arousal_counter += main_arousal
+                        if main_arousal == 0:
+                            arousal_counter -= 1
+                        elif main_arousal == 1:
+                            arousal_counter += 1
                         # print("AROUSAL: " + str(arousal_counter))
 
                         # if main_arousal > 0:
