@@ -38,6 +38,10 @@ from helper import Helper
 
 import matplotlib.pyplot as plt
 
+def __init__(self):
+    self.main_save_load_num = 0
+    self.last_save_num = 0
+
 def extract_plan(time_limit_count, search_count, actions_data, best_pos, require_replanning):
     nodes = []
     actions = []
@@ -252,7 +256,7 @@ class AstarAgent:
     # algorithm: PPO
     # policy: MlpPolicy
 
-    def AStarRun(self, segments, game_env) :
+    def AStarRun(self, segments, game_env, segment_count, step_max_count) :
         # game_env = None
         
         main_actions_data = {
@@ -283,57 +287,69 @@ class AstarAgent:
         preference = 1
         
         temp_state = None
-        main_env = PiratesEnvironmentGameObs(
-            id_number=1,
-            weight=weight,
-            graphics=True, # Pirates is bugged in headless, prevent it manually for now
-            cluster=cluster,
-            target_arousal=target_arousal,
-            period_ra=period_ra,
-            discretize=discretize,
-            classifier=classifier,
-            preference=preference,
-        )
-        
-        # if game_env is None:
-        #     main_env = PiratesEnvironmentGameObs(
-        #         id_number=1,
-        #         weight=weight,
-        #         graphics=True, # Pirates is bugged in headless, prevent it manually for now
-        #         cluster=cluster,
-        #         target_arousal=target_arousal,
-        #         period_ra=period_ra,
-        #         discretize=discretize,
-        #         classifier=classifier,
-        #         preference=preference,
-        #     )
-        # else:
-        #     game_env.reached_termination = False
-        #     game_env.reached_end_door = False
-        #     game_env.customSideChannel.levelEnd = False
-        #     temp_state = game_env.reset()
+        # main_env = PiratesEnvironmentGameObs(
+        #     id_number=1,
+        #     weight=weight,
+        #     graphics=True, # Pirates is bugged in headless, prevent it manually for now
+        #     cluster=cluster,
+        #     target_arousal=target_arousal,
+        #     period_ra=period_ra,
+        #     discretize=discretize,
+        #     classifier=classifier,
+        #     preference=preference,
+        # )
+        print("game_env: " + str(game_env))
+        if game_env is None:
+            main_env = PiratesEnvironmentGameObs(
+                id_number=1,
+                weight=weight,
+                graphics=True, # Pirates is bugged in headless, prevent it manually for now
+                cluster=cluster,
+                target_arousal=target_arousal,
+                period_ra=period_ra,
+                discretize=discretize,
+                classifier=classifier,
+                preference=preference,
+            )
+
+            self.main_save_load_num = 0
+            main_env.build_segment(segments)
+
+            main_env.reached_termination = False
+            main_env.reached_end_door = False
+            main_env.customSideChannel.levelEnd = False
+            self.obs = main_env.reset()
+        else:
+            self.main_save_load_num = self.last_save_num
+
+            game_env.reached_termination = False
+            game_env.reached_end_door = False
+            game_env.customSideChannel.levelEnd = False
+            # temp_state = game_env.semi_reset()
+            temp_state = game_env.reset()
             
-        #     main_env = game_env
+            main_env = game_env
 
-        #     # if main_env.reached_termination == True or main_env.reached_end_door == True or temp_state[37] > 0:
-        #     #     print("main_env.reached_termination: " + str(main_env.reached_termination))
-        #     #     print("main_env.reached_end_door: " + str(main_env.reached_end_door))
-        #     #     print("temp_state[37]: " + str(temp_state[37]))
-        #     #     keyboard.wait("space")
+            # if main_env.reached_termination == True or main_env.reached_end_door == True or temp_state[37] > 0:
+            #     print("main_env.reached_termination: " + str(main_env.reached_termination))
+            #     print("main_env.reached_end_door: " + str(main_env.reached_end_door))
+            #     print("temp_state[37]: " + str(temp_state[37]))
+            #     keyboard.wait("space")
+    
+            main_env.build_segment(segments)
+
+            main_env.reached_termination = False
+            main_env.reached_end_door = False
+            main_env.customSideChannel.levelEnd = False
+            # self.obs = main_env.semi_reset()
+            self.obs = main_env.reset()
         
-        main_env.build_segment(segments)
+        # main_save_load_num = 0
 
-        main_env.reached_termination = False
-        main_env.reached_end_door = False
-        main_env.customSideChannel.levelEnd = False
-        self.obs = main_env.reset()
-        
-        main_save_load_num = 0
-
-        main_save_load_num += 1
+        self.main_save_load_num += 1
 
         # if game_env is None:
-        main_env.step(main_actions_data["stay_still"]["action"], -main_save_load_num, False)
+        # main_env.step(main_actions_data["stay_still"]["action"], -main_save_load_num, False)
         
         # while True and game_env is not None:
         #     main_env.step(main_actions_data["stay_still"]["action"], 1, False)
@@ -349,13 +365,13 @@ class AstarAgent:
         # if game_env is not None:
         #     main_env.step(main_actions_data["stay_still"]["action"], -main_save_load_num, False)
 
-        # game_env = main_env
+        game_env = main_env
 
         # print("AStarRun BEGIN")
         # keyboard.wait("space")
         
         # print("Starting Load, num: " + str(main_save_load_num))
-        main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False)
+        main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], self.main_save_load_num, False)
         # keyboard.wait("space")
 
         main_dist_x = 0
@@ -371,15 +387,17 @@ class AstarAgent:
         main_visited_states = []
 
         while True:   
-            main_new_save_load_num = main_save_load_num
+            main_new_save_load_num = self.main_save_load_num
 
-            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False)
+            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], self.main_save_load_num, False)
 
             main_nodes_list, main_actions_list, main_save_list, main_time_limit_count, main_search_count, main_best_pos, main_new_save_load_num, main_pos_pool, main_visited_states = optimise(main_time_limit_count, main_pos_pool, main_visited_states, main_actions_data, main_env, main_state, main_new_save_load_num, main_dist_x, main_dist_y, main_damage, main_death, main_score, main_kill_count)
 
             if main_search_count >= 50 or main_search_count == 0 or main_time_limit_count >= 250:
                 playable = False
                 print("Close 1")
+                state_list = []
+                game_env = None
                 main_env.env.close()
                 # main_env.step(main_actions_data["stay_still"]["action"], 1, False)
                 # main_env.reached_termination = False
@@ -387,9 +405,9 @@ class AstarAgent:
                 # main_env.customSideChannel.levelEnd = False
                 # main_env.reset()
                 # keyboard.wait("space")  
-                return playable, main_dist_x, 0, game_env
+                return playable, main_dist_x, 0, game_env, state_list
             
-            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False)
+            main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_actions_data["stay_still"]["action"], self.main_save_load_num, False)
 
             main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(main_best_pos.action, main_best_pos.save_num, False)
                 
@@ -410,6 +428,7 @@ class AstarAgent:
 
                 main_env.reached_termination = False
                 main_env.reached_end_door = False
+                # main_env.semi_reset()
                 main_env.reset()
                 main_env.customSideChannel.levelEnd = False
 
@@ -417,23 +436,41 @@ class AstarAgent:
                 arousal_counter = 0
 
                 tick_counter = 0
+
+                state_list = []
+                can_record_state = False
+
                 for i, part_node in enumerate(main_nodes_list):
                     if part_node.save_num:
                         main_arousal = -1
+                        
                         if action_count == 0:
                             main_env.reached_termination = False
                             main_env.reached_end_door = False
                             main_env.customSideChannel.levelEnd = False
 
                             main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(part_node.action, 1, True)
+                            self.last_save_num = 1
+
                             main_env.reached_termination = False
                             main_env.reached_end_door = False
                             main_reached_termination = False
                             main_env.customSideChannel.levelEnd = False
                         else:
                             main_arousal, main_raw_grid, main_state, main_reached_termination, main_reached_end_door, main_reward, main_done, main_info = main_env.step(part_node.action, part_node.save_num, True)
-                        
+                            self.last_save_num = part_node.save_num
+
                         tick_counter += 1
+                        # state_list.append(main_state)
+
+                        if can_record_state == True:
+                            state_list.append(main_state[:38])
+
+                        if main_state[0] < -20:
+                            can_record_state = True
+                        # if main_state[0] < -20:
+                        # print("main_state[:38]: " + str(main_state[:38]))
+                        # keyboard.wait("space")
 
                         # print("MAIN AROUSAL: " + str(main_arousal))
                         # arousal_counter += main_arousal
@@ -487,10 +524,16 @@ class AstarAgent:
                 print("---------------")
 
                 playable = True
+                main_search_count = 0
+                main_time_limit_count = 0
 
                 # if main_reached_end_door == False:
                 #     playable = False
 
+                # if not playable or (segment_count + 1) >= step_max_count:
+                #     game_env = None
+                #     main_env.env.close()
+                game_env = None
                 main_env.env.close()
 
                 print("FINAl AROUSAL: " + str(arousal_counter))
@@ -502,7 +545,7 @@ class AstarAgent:
                 # main_env.customSideChannel.levelEnd = False
                 # main_env.reset()
                 # keyboard.wait("space")  
-                return playable, main_dist_x, arousal_counter, game_env
+                return playable, main_dist_x, arousal_counter, game_env, state_list
 
             main_new_save_load_num += 1  
 
@@ -519,9 +562,9 @@ class AstarAgent:
 
             #     return playable, main_dist_x
             
-            main_save_load_num = main_new_save_load_num
+            self.main_save_load_num = main_new_save_load_num
 
-            test_arousal, test_raw_grid, test_state, test_reached_termination, test_reached_end_door, test_reward, test_done, test_info = main_env.step(main_actions_data["stay_still"]["action"], main_save_load_num, False) 
+            test_arousal, test_raw_grid, test_state, test_reached_termination, test_reached_end_door, test_reward, test_done, test_info = main_env.step(main_actions_data["stay_still"]["action"], self.main_save_load_num, False) 
             
             # if main_reached_termination and main_death > 0:
             #     playable = True

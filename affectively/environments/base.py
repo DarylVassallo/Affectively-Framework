@@ -150,6 +150,12 @@ class BaseEnvironment(gym.Env, ABC):
         self.episode_arousal_trace.clear()
         self.period_arousal_trace.clear()
         return state
+    
+    def semi_reset(self, **kwargs):
+        if self.callback is not None and len(self.episode_arousal_trace) > 0:
+            self.callback.on_episode_end()
+        state = self.env.reset()
+        return state
 
     def reward_behavior(self):
         """
@@ -229,6 +235,7 @@ class BaseEnvironment(gym.Env, ABC):
         #     print("GENERATE self.episode_arousal_trace: " + str(self.episode_arousal_trace))
         #     print("GENERATE self.period_arousal_trace: " + str(self.period_arousal_trace))
         #     keyboard.wait("space") 
+        print("AROUSAL: " + str(arousal))
         return arousal
 
     def step(self, action, using_arousal):
@@ -265,7 +272,6 @@ class BaseEnvironment(gym.Env, ABC):
 
         self.current_score = env_score  
 
-        # current_arousal = 0
         current_arousal = -1
 
         if using_arousal:

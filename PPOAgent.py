@@ -75,13 +75,13 @@ if __name__ == "__main__":
     env = Monitor(env)
 
     eval_env = GANLevelEnv()
-    eval_env = Monitor(env)
+    eval_env = Monitor(eval_env)
 
     label = 'optimize' if weight == 0 else 'arousal' if weight == 1 else 'blended'
 
     checkpoint_callback = CheckpointCallback(
                                                 save_freq=500,
-                                                save_path="./GANArousalAgents/PPO/MinEnemy1/",
+                                                save_path="./GANArousalAgents/PPO/MinArousal2/",
                                                 name_prefix=f"cnn_ppo_{label}_{run}"
                                             )
     
@@ -93,10 +93,10 @@ if __name__ == "__main__":
 
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path="./GANArousalAgents/PPO/MinEnemy1/best_model/",
-        log_path="./GANArousalAgents/PPO/MinEnemy1/eval_logs/",
-        eval_freq=500,
-        n_eval_episodes=5,
+        best_model_save_path="./GANArousalAgents/PPO/MinArousal2/best_model/",
+        log_path="./GANArousalAgents/PPO/MinArousal2/eval_logs/",
+        eval_freq=1000,
+        n_eval_episodes=3,
         deterministic=True,
         callback_after_eval=stop_train_callback
     )
@@ -108,35 +108,35 @@ if __name__ == "__main__":
                             ])
 
 
-    policy_kwargs = dict(
-        features_extractor_class=CustomMLPExtractor,
-        features_extractor_kwargs=dict(features_dim=256),
-        net_arch = dict(pi=[256, 256], vf=[256, 256]),
-        activation_fn = torch.nn.ReLU,
-    )
-
-    model = PPO(
-        policy="MlpPolicy",
-        policy_kwargs=policy_kwargs,
-        env=env,
-        verbose=1,
-        n_steps=64,
-        tensorboard_log="./Tensorboard/CNN/",
-        device='cuda',
-    )
-
-    # checkpoint_path = "./GANArousalAgents/PPO/cnn_ppo_optimize_1_6700_steps.zip"
-
-    # model = PPO.load(
-    #     checkpoint_path,
-    #     env=env,
-    #     device="cuda",
-    #     tensorboard_log="./Tensorboard/CNN/"
+    # policy_kwargs = dict(
+    #     features_extractor_class=CustomMLPExtractor,
+    #     features_extractor_kwargs=dict(features_dim=256),
+    #     net_arch = dict(pi=[256, 256], vf=[256, 256]),
+    #     activation_fn = torch.nn.ReLU,
     # )
-    # model.verbose = 1
 
-    # remaining_steps = 20000 - model.num_timesteps
-    remaining_steps = 20000000
+    # model = PPO(
+    #     policy="MlpPolicy",
+    #     policy_kwargs=policy_kwargs,
+    #     env=env,
+    #     verbose=1,
+    #     n_steps=64,
+    #     tensorboard_log="./Tensorboard/CNN/",
+    #     device='cuda',
+    # )
+
+    checkpoint_path = "./GANArousalAgents/PPO/MinArousal2/cnn_ppo_optimize_1_6500_steps.zip"
+
+    model = PPO.load(
+        checkpoint_path,
+        env=env,
+        device="cuda",
+        tensorboard_log="./Tensorboard/CNN/"
+    )
+    model.verbose = 1
+
+    remaining_steps = 20000000 - model.num_timesteps
+    # remaining_steps = 20000000
 
     model.learn(total_timesteps=remaining_steps, callback=callbacks, reset_num_timesteps=False)
-    model.save(f"./GANArousalAgents/PPO/MinEnemy1/cnn_ppo_{label}_{run}_extended")
+    model.save(f"./GANArousalAgents/PPO/MinArousal2/cnn_ppo_{label}_{run}_extended")

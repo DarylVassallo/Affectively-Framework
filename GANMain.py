@@ -201,6 +201,173 @@ def generate_graph():
     plt.title("Smoothed Progression of Arousal Value (generated per step) per Episode")
     plt.show()
 
+def read_state_values(log_file, state_index=-5):
+    values = []
+
+    with open(log_file, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = [p.strip() for p in line.split(":")]
+            if len(parts) != 2:
+                continue
+
+            state_parts = [s.strip() for s in parts[1].split(",")]
+
+            # pick which value in the state array you want
+            values.append(float(state_parts[38]))
+# 2, 3, 4, 5
+# 24, 25, 26, 30, 31, 32, 33, 34, 
+    return values
+
+def generate_state_graph():
+    log_file_1 = os.path.join("ExperimentLogs", "ResultsLog_26", "state_list.txt")
+    log_file_2 = os.path.join("ExperimentLogs", "ResultsLog_27", "state_list.txt")
+
+    values1 = read_state_values(log_file_1, state_index=0)
+    values2 = read_state_values(log_file_2, state_index=0)
+
+    # Make same length (crop to shortest)
+    min_len = min(len(values1), len(values2))
+    values1 = values1[:min_len]
+    values2 = values2[:min_len]
+
+    x = range(min_len)
+
+    window = 8
+    poly = 2
+
+    # window must be odd and <= length
+    if window > min_len:
+        window = min_len if min_len % 2 == 1 else min_len - 1
+
+    smooth1 = savgol_filter(values1, window, poly)
+    smooth2 = savgol_filter(values2, window, poly)
+
+    plt.figure()
+    # plt.plot(x, values1, label="ResultsLog_24")
+    # plt.plot(x, values2, label="ResultsLog_25")
+    plt.plot(x, smooth1, label="ResultsLog_24")
+    plt.plot(x, smooth2, label="ResultsLog_25")
+
+    plt.xlabel("Episode")
+    plt.ylabel("State[0] Value")
+    plt.title("Smoothed Progression of State[0] per Episode")
+    plt.legend()
+    plt.show()
+
+def generate_graph_with_average():
+    # Group 1 logs
+    log_files_1 = [
+        os.path.join("ExperimentLogs", "Max_Arousal_1", "reward_average.txt"),
+        os.path.join("ExperimentLogs", "Max_Arousal_2", "reward_average.txt"),
+        os.path.join("ExperimentLogs", "Max_Arousal_3", "reward_average.txt"),
+    ]
+
+    # Group 2 logs (CHANGE THESE PATHS)
+    log_files_2 = [
+        os.path.join("ExperimentLogs", "Min_Arousal_1", "reward_average.txt"),
+        os.path.join("ExperimentLogs", "Min_Arousal_2", "reward_average.txt"),
+        os.path.join("ExperimentLogs", "Min_Arousal_3", "reward_average.txt"),
+    ]
+
+    def load_runs(log_files, invert):
+        all_values = []
+
+        for log_file in log_files:
+            values = []
+            with open(log_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    parts = [p.strip() for p in line.split(":")]
+                    if len(parts) != 2:
+                        continue
+
+                    if invert == True:
+                        segment_count = -float(parts[1])
+                    else:
+                        segment_count = float(parts[1])
+
+                    values.append(segment_count)
+
+            all_values.append(values)
+
+        return all_values
+
+    # Load both groups
+    all_values_1 = load_runs(log_files_1, False)
+    all_values_2 = load_runs(log_files_2, True)
+
+    # Crop BOTH groups to same length so they align on the plot
+    min_len = min(
+        min(len(v) for v in all_values_1),
+        min(len(v) for v in all_values_2)
+    )
+
+    all_values_1 = [v[:min_len] for v in all_values_1]
+    all_values_2 = [v[:min_len] for v in all_values_2]
+
+    # Convert to numpy arrays
+    data_1 = np.array(all_values_1)
+    data_2 = np.array(all_values_2)
+
+    # Mean and std
+    mean_1 = np.mean(data_1, axis=0)
+    std_1 = np.std(data_1, axis=0)
+
+    mean_2 = np.mean(data_2, axis=0)
+    std_2 = np.std(data_2, axis=0)
+
+    # Smooth
+    window = 41
+    poly = 2
+
+    if window > min_len:
+        window = min_len if min_len % 2 == 1 else min_len - 1
+
+    mean_1_smooth = savgol_filter(mean_1, window, poly)
+    std_1_smooth = savgol_filter(std_1, window, poly)
+
+    mean_2_smooth = savgol_filter(mean_2, window, poly)
+    std_2_smooth = savgol_filter(std_2, window, poly)
+
+    x = np.arange(min_len)
+
+    # Plot
+    plt.figure()
+
+    # Line 1
+    plt.plot(x, mean_1_smooth, label="Maximum Arousal")
+    plt.fill_between(
+        x,
+        mean_1_smooth - std_1_smooth,
+        mean_1_smooth + std_1_smooth,
+        alpha=0.25,
+        label="±1 Std Dev"
+    )
+
+    # Line 2
+    plt.plot(x, mean_2_smooth, label="Minimum Arousal")
+    plt.fill_between(
+        x,
+        mean_2_smooth - std_2_smooth,
+        mean_2_smooth + std_2_smooth,
+        alpha=0.25,
+        label="±1 Std Dev"
+    )
+
+    plt.xlabel("Episode")
+    plt.ylabel("Arousal")
+    plt.title("Smoothed Average Arousal Per Segment (Mean ± Std Dev)")
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+    plt.show()
+
+
 def evaluate_model():
     env = GANLevelEnv()
 
@@ -310,22 +477,7 @@ def unity_generate_level():
     #     device='cuda',
     # )
 
-    # model = PPO.load("GANArousalAgents\Maximum_Enemy_Count_Models\cnn_ppo_optimize_1_extended", env=env)
-    # model = PPO.load("GANArousalAgents\PPO\cnn_ppo_optimize_1_extended", env=env)
-    model = PPO.load("GANArousalAgents\Maximum_Arousal_Agents\cnn_ppo_optimize_1_extended", env=env)
-
-    # model = PPO.load("GANArousalAgents/MultipleValuesWithoutPlayability", env=env)
-    # GANArousalAgents\multipleenemieswithoutplayabilityv2.zip
-
-    # model = PPO.load("GANArousalAgents/MaxEnemyV2/cnn_ppo_optimize_1_extended.zip", env=env)
-    
-    
-    # model = PPO.load("GANArousalAgents/MaxEnemyV2/cnn_ppo_optimize_1_100_steps.zip", env=env)
-
-    # model = PPO.load("GANArousalAgents\higharousal\cnn_ppo_optimize_1_extended.zip", env=env)
-    # model = PPO.load("GANArousalAgents\PPO\cnn_ppo_optimize_1_17300_steps.zip", env=env)
-
-    # model = PPO.load("GANArousalAgents\Minimum_Enemy_Count_Models\cnn_ppo_optimize_1_extended.zip", env=env)
+    model = PPO.load("GANArousalAgents\MinArousal\cnn_ppo_optimize_1_14000_steps", env=env)
 
     obs, info = env.reset()
     
@@ -338,7 +490,7 @@ def unity_generate_level():
     all_actions = []
     for i in range(10):
         # print("i: " + str(i))
-        # action = np.random.uniform(-1, 1, size=32)
+        # action = np.random.uniform(-1, 1, size=64)
         # action = np.zeros(32) 
         # print("Action " + str(i) + ": " + str(action))
 
@@ -394,6 +546,8 @@ def unity_generate_level():
     plt.show()
 
 if __name__ == '__main__':
-    # unity_generate_level()
+    unity_generate_level()
     # generate_graph()
-    evaluate_model()
+    # evaluate_model()
+    # generate_graph_with_average()
+    # generate_state_graph()

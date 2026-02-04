@@ -37,6 +37,11 @@ class PiratesEnvironment(BaseEnvironment):
         state = super().reset()
         state = self.construct_state(state)
         return state
+    
+    def semi_reset(self, **kwargs):
+        state = super().semi_reset()
+        state = self.construct_state(state)
+        return state
 
     def step(self, action, save_load, using_arousal):
 

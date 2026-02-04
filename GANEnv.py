@@ -23,6 +23,7 @@ class GANLevelEnv(gym.Env):
     def __init__(self, gan_model=GANWrapper(), level_dim=32):
         super().__init__()
 
+        self.astarAgent = None
         self.game_env = None
 
         self.episode_count = 0
@@ -128,8 +129,17 @@ class GANLevelEnv(gym.Env):
 
             return self._get_observation_stack(), reward, terminated, False, info
 
-        self.playable, self.arousal_counter = self.is_playable(self.segment_buffer)
+        self.playable, self.arousal_counter, state_list = self.is_playable(self.segment_buffer, self.segment_count, self.step_max_count)
         # print("ENV self.arousal_counter: " + str(self.arousal_counter))
+
+        with open(self.state_list_file, "a", encoding="utf-8") as f:
+            for i in range(len(state_list)):
+                values_str = ",".join(str(v) for v in state_list[i])
+                f.write(
+                    "Episode " + str(self.episode_count) +
+                    " State " + str(i) +
+                    " : " + values_str + "\n"
+                )
 
 
         # score, enemy_count, left_count, middle_count, right_count = self.reward(self.current_segment, self.segment_count, self.step_count)
@@ -226,6 +236,8 @@ class GANLevelEnv(gym.Env):
         self.log_dir = os.path.join(self.log_dir, f"ResultsLog_{next_log_number}")
         os.makedirs(self.log_dir, exist_ok=True)
 
+        self.state_list_file = os.path.join(self.log_dir, "state_list.txt")
+
         self.playable_file = os.path.join(self.log_dir, "playable_results.txt")
         self.enemy_count_file = os.path.join(self.log_dir, "enemy_count.txt")
         self.arousal_file = os.path.join(self.log_dir, "arousal_count.txt")
@@ -243,22 +255,29 @@ class GANLevelEnv(gym.Env):
     def reset_is_playable(self, segment):
         # return True, 0
 
-        agent = AstarAgent() 
-        playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
+        self.astarAgent = AstarAgent() 
+        self.game_env = None
+
+        playable, playable_distance, arousal_counter, self.game_env, state_list = self.astarAgent.AStarRun(segment, self.game_env, 0, 0)
         print("RESET, PLAYABLE: " + str(playable) + ", AROUSAL: " + str(arousal_counter))
         print("==========")
         return playable, arousal_counter
 
-    def is_playable(self, segment):
-        # return True, 0
+    def is_playable(self, segment, segment_count, step_max_count):
+        # return True, 0, []
 
-        agent = AstarAgent() 
-        playable, playable_distance, arousal_counter, self.game_env = agent.AStarRun(segment, self.game_env)
-        print("STEP")
-        return playable, arousal_counter
+        # agent = AstarAgent() 
+        playable, playable_distance, arousal_counter, self.game_env, state_list = self.astarAgent.AStarRun(segment, self.game_env, segment_count, step_max_count)
+        print("STEP, AROUSAL: " + str(arousal_counter))
+        print("state_list")
+        print(str(state_list))
+        print("------")
+        return playable, arousal_counter, state_list
 
     def reward(self, arousal_counter, segment, index): 
         num_enemies = sum(np.count_nonzero(arr == 5) for arr in segment)
+        print("NUMBER OF ENEMIES: " + str(num_enemies))
+        print("AROUSAL COUNTER: " + str(arousal_counter))
         left = 0
         middle = 0
         right = 0
