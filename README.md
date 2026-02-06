@@ -19,6 +19,15 @@ Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
+Choose Training
+Open GANEnv.py
+Locate the reward() function
+Choose one reward strategy (Train for high arousal, low enemy count, etc.)
+
+Start Training
+```bash
+python PPOAgent.py
+```
 
 If on MacOS (Tested on an Apple Silicon machine)
 ```

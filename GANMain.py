@@ -3,7 +3,6 @@ import numpy as np
 
 from GANEnv import GANLevelEnv
 from stable_baselines3 import PPO
-from GANGenerate import CNet
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -49,31 +48,20 @@ class CustomMLPExtractor(BaseFeaturesExtractor):
     
 def generate_graph_using_module():
     env = GANLevelEnv()
-    # model = PPO.load("GANArousalAgents/MaxEnemy/cnn_ppo_solid_optimize_1_extended.zip", env=env)
-    # model = PPO.load("GANArousalAgents/Playable/cnn_ppo_solid_onlyplayable_optimize_1_extended.zip", env=env)
-    # obs, info = env.reset()
 
     episode_nums = []
     avg_enemy_counts = []
 
     episode_num = 100
     while episode_num <= 700:
-        print("###################################")
-        print("###################################")
-        print("###################################")
-        print("###################################")
-        print("episode_num: " + str(episode_num))
-        # model = PPO.load("GANArousalAgents/MaxEnemy/cnn_ppo_optimize_1_" + str(episode_num) + "_steps", env=env)
         model = PPO.load("GANArousalAgents/PPO/cnn_ppo_optimize_1_" + str(episode_num) + "_steps", env=env)
         average_num_enemy = 0
         for j in  range(10):
-            print("ATTEMPT " + str(j))
             obs, info = env.reset()
             num_enemies = 0
 
             terminated = False
             for i in range(11):
-                print("SEGMENT " + str(i))
                 if not terminated:
                     action, _ = model.predict(obs, deterministic=True)
                     obs, reward, terminated, truncated, info = env.step(action)
@@ -88,17 +76,7 @@ def generate_graph_using_module():
             print(str(j) + ": " + str(num_enemies))
 
         average_num_enemy = average_num_enemy / 10
-        # episode_nums.append(episode_num)
-        # avg_enemy_counts.append(average_num_enemy)
 
-        print("")
-        print(str(average_num_enemy))
-        print("====================")
-
-        # if episode_num == 100:
-        #     episode_num += 900
-        # else:
-        #     episode_num += 500
         episode_num += 300
 
     plt.figure()
@@ -153,7 +131,6 @@ def load_multi_enemy_run(run_folder):
 
             _, is_playable, n = playable_parts
 
-            # IMPORTANT FIX: is_playable is a STRING
             is_playable = is_playable.lower() == "true"
 
             playable_segments = int(n) if is_playable else int(n) - 1
@@ -185,7 +162,7 @@ def generate_average_dev_multiple_enemies_graph():
     all_right = []
 
     plt.rcParams.update({
-        "font.size": 14,        # base text size
+        "font.size": 14,
         "axes.titlesize": 16,
         "axes.labelsize": 14,
         "legend.fontsize": 12,
@@ -260,7 +237,6 @@ def generate_average_dev_multiple_enemies_graph():
 
 
 def generate_multiple_enemies_graph():
-    # log_file = "RecordedLogs\MultipleValuesRecordedWithoutPlayability\enemy_count.txt"
     log_file = os.path.join( "ExperimentLogs", "MultiEnemy", "MultiEnemy3", "enemy_count.txt")
     playable_log_file = os.path.join( "ExperimentLogs", "MultiEnemy", "MultiEnemy3", "playable_results.txt")
 
@@ -334,12 +310,6 @@ def generate_multiple_enemies_graph():
     plt.show()
 
 def generate_graph():
-    # Read values from file
-    # log_file = "RecordedLogs\MaxEnemyV2Logs\scores.txt"
-
-    # log_file = os.path.join( "ExperimentLogs", "Maximum_Enemy_Count_Logs", "enemy_count.txt" )
-    # log_file = os.path.join( "ExperimentLogs", "Minimum_Enemy_Count_Logs", "enemy_count.txt" )
-    # log_file = os.path.join( "ExperimentLogs", "Maximum_Enemy_Count_Logs", "enemy_count.txt" )
     log_file = os.path.join( "ExperimentLogs", "Maximum_Arousal_Logs", "arousal_count.txt" )
 
     values = []
@@ -356,17 +326,8 @@ def generate_graph():
                     continue
 
                 segment_count = int(parts[1])
-                # if parts[1] == True:
-                #     segment_count = segment_count + 1
-                
-                # if parts[1] == False:
-                #     segment_count = segment_count - 1
                 values.append(int(segment_count))
 
-                # values.append(float(parts[1]))
-
-
-    # X-axis: index (step, episode, etc.)
     x = range(len(values))
 
     window = 41
@@ -374,7 +335,6 @@ def generate_graph():
 
     smooth = savgol_filter(values, window, poly)
 
-    # Plot
     plt.figure()
     plt.plot(x, smooth)
     plt.xlabel("Episode")
@@ -397,10 +357,8 @@ def read_state_values(log_file, state_index=-5):
 
             state_parts = [s.strip() for s in parts[1].split(",")]
 
-            # pick which value in the state array you want
             values.append(float(state_parts[38]))
-# 2, 3, 4, 5
-# 24, 25, 26, 30, 31, 32, 33, 34, 
+
     return values
 
 def generate_state_graph():
@@ -410,7 +368,6 @@ def generate_state_graph():
     values1 = read_state_values(log_file_1, state_index=0)
     values2 = read_state_values(log_file_2, state_index=0)
 
-    # Make same length (crop to shortest)
     min_len = min(len(values1), len(values2))
     values1 = values1[:min_len]
     values2 = values2[:min_len]
@@ -420,7 +377,6 @@ def generate_state_graph():
     window = 8
     poly = 2
 
-    # window must be odd and <= length
     if window > min_len:
         window = min_len if min_len % 2 == 1 else min_len - 1
 
@@ -428,8 +384,6 @@ def generate_state_graph():
     smooth2 = savgol_filter(values2, window, poly)
 
     plt.figure()
-    # plt.plot(x, values1, label="ResultsLog_24")
-    # plt.plot(x, values2, label="ResultsLog_25")
     plt.plot(x, smooth1, label="ResultsLog_24")
     plt.plot(x, smooth2, label="ResultsLog_25")
 
@@ -440,14 +394,12 @@ def generate_state_graph():
     plt.show()
 
 def generate_graph_with_average():
-    # Group 1 logs
     log_files_1 = [
         os.path.join("ExperimentLogs", "Max_Arousal_1", "reward_average.txt"),
         os.path.join("ExperimentLogs", "Max_Arousal_2", "reward_average.txt"),
         os.path.join("ExperimentLogs", "Max_Arousal_3", "reward_average.txt"),
     ]
 
-    # Group 2 logs (CHANGE THESE PATHS)
     log_files_2 = [
         os.path.join("ExperimentLogs", "Min_Arousal_1", "reward_average.txt"),
         os.path.join("ExperimentLogs", "Min_Arousal_2", "reward_average.txt"),
@@ -480,11 +432,9 @@ def generate_graph_with_average():
 
         return all_values
 
-    # Load both groups
     all_values_1 = load_runs(log_files_1, False)
     all_values_2 = load_runs(log_files_2, True)
 
-    # Crop BOTH groups to same length so they align on the plot
     min_len = min(
         min(len(v) for v in all_values_1),
         min(len(v) for v in all_values_2)
@@ -493,18 +443,15 @@ def generate_graph_with_average():
     all_values_1 = [v[:min_len] for v in all_values_1]
     all_values_2 = [v[:min_len] for v in all_values_2]
 
-    # Convert to numpy arrays
     data_1 = np.array(all_values_1)
     data_2 = np.array(all_values_2)
 
-    # Mean and std
     mean_1 = np.mean(data_1, axis=0)
     std_1 = np.std(data_1, axis=0)
 
     mean_2 = np.mean(data_2, axis=0)
     std_2 = np.std(data_2, axis=0)
 
-    # Smooth
     window = 41
     poly = 2
 
@@ -519,10 +466,8 @@ def generate_graph_with_average():
 
     x = np.arange(min_len)
 
-    # Plot
     plt.figure()
 
-    # Line 1
     plt.plot(x, mean_1_smooth, label="Maximum Arousal")
     plt.fill_between(
         x,
@@ -532,7 +477,6 @@ def generate_graph_with_average():
         label="±1 Std Dev"
     )
 
-    # Line 2
     plt.plot(x, mean_2_smooth, label="Minimum Arousal")
     plt.fill_between(
         x,
@@ -621,7 +565,6 @@ def generate_action_value_graph():
 
     plt.figure()
 
-    # Plot each action dimension separately
     for dim in range(all_actions.shape[1]):
         plt.scatter(
             timesteps,
@@ -658,78 +601,59 @@ def unity_generate_level():
     #     device='cuda',
     # )
 
-    model = PPO.load("GANArousalAgents\MultiEnemy1\cnn_ppo_optimize_1_28000_steps", env=env)
+    model = PPO.load("GANArousalAgents\MultiArousal3\cnn_ppo_optimize_1_18500_steps", env=env)
 
     obs, info = env.reset()
     
-    # print("reset obs: " + str(obs))
     segment = info["segment"]
 
     file_path = os.path.join(results_path, f"segment_{1}.csv")
     np.savetxt(file_path, segment, fmt="%d", delimiter=",")
     
-    all_actions = []
+    enemy_count_list = []
     for i in range(10):
-        # print("i: " + str(i))
-        # action = np.random.uniform(-1, 1, size=64)
-        # action = np.zeros(32) 
-        # print("Action " + str(i) + ": " + str(action))
-
-        # print("obs: " + str(obs))
         action, _ = model.predict(obs, deterministic=True)
-        # print(str(i) + ": action: " + str(action))
-        # obs, reward, terminated, truncated, info = env.step(i, action)
         obs, reward, terminated, truncated, info = env.step(action)
 
-        # print("Generated Level (info):")
-        # print(info)
-        # print("Reward:", reward)
-
-        # if i >= 6 and i <= 8:
-        segment = info["segment"]         # numpy array
-        # enemy_count = info["enemy_count"]
-
-        # print("")
-        # print("Segment " + str(i + 1) + ": " + str(segment))
-        # print("====================")
-
-        # print("i: " + str(i) + ", enemy_count: " + str(enemy_count))
-        # if enemy_count > 0:
-        # print("segment:")
-        # print(str(segment))
+        segment = info["segment"] 
+        enemy_count = info["enemy_count"]
             
         print("results_path: " + str(results_path))
         file_path = os.path.join(results_path, f"segment_{i+1 + 1}.csv")
         np.savetxt(file_path, segment, fmt="%d", delimiter=",")
 
-        all_actions.append(action)
+        enemy_count_list.append(enemy_count)
 
         print("----------")
 
-    all_actions = np.array(all_actions)
-    timesteps = np.arange(all_actions.shape[0])
+    enemy_count_list = np.array(enemy_count_list)
+    x = np.arange(len(enemy_count_list))
 
-    plt.figure()
+    plt.figure(figsize=(8, 5))
 
-    # Plot each action dimension separately
-    for dim in range(all_actions.shape[1]):
-        plt.scatter(
-            timesteps,
-            all_actions[:, dim],
-            label=f"Action dim {dim}",
-            alpha=0.7,
-        )
+    plt.plot(
+        x,
+        enemy_count_list,
+        linestyle='-',
+        linewidth=2,
+        marker='o',
+        label="Arousal"
+    )
 
-    plt.xlabel("Timestep")
-    plt.ylabel("Action Value")
-    plt.title("Scatter Plot of PPO Actions Over Time (Using Maximum Enemy Count Model with Deterministic = True)")
-    plt.legend()
+    plt.xlabel("Segment")
+    plt.ylabel("Arousal")
+    plt.title("Arousal Generated Per Segment")
+
+    plt.grid(True, alpha=0.4)
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+
+    plt.tight_layout()
     plt.show()
 
 if __name__ == '__main__':
-    generate_average_dev_multiple_enemies_graph()
+    # generate_average_dev_multiple_enemies_graph()
     # generate_multiple_enemies_graph()
-    # unity_generate_level()
+    unity_generate_level()
     # generate_graph()
     # evaluate_model()
     # generate_graph_with_average()

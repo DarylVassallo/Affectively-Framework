@@ -23,8 +23,6 @@ import sys
 import yaml
 import subprocess
 import sys
-# print("SHOWING")
-# print(sys.executable)
 
 class CustomMLPExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
@@ -74,9 +72,6 @@ if __name__ == "__main__":
     env = GANLevelEnv()
     env = Monitor(env)
 
-    # eval_env = GANLevelEnv()
-    # eval_env = Monitor(eval_env)
-
     label = 'optimize' if weight == 0 else 'arousal' if weight == 1 else 'blended'
 
     checkpoint_callback = CheckpointCallback(
@@ -84,22 +79,6 @@ if __name__ == "__main__":
                                                 save_path="./GANArousalAgents/PPO/NewMaxArousal/",
                                                 name_prefix=f"cnn_ppo_{label}_{run}"
                                             )
-    
-    # stop_train_callback = StopTrainingOnNoModelImprovement(
-    #     max_no_improvement_evals=3,
-    #     min_evals=3,
-    #     verbose=1
-    # )
-
-    # eval_callback = EvalCallback(
-    #     eval_env,
-    #     best_model_save_path="./GANArousalAgents/PPO/NewMaxArousal/best_model/",
-    #     log_path="./GANArousalAgents/PPO/NewMaxArousal/eval_logs/",
-    #     eval_freq=1000,
-    #     n_eval_episodes=3,
-    #     deterministic=True,
-    #     callback_after_eval=stop_train_callback
-    # )
     
     callbacks = CallbackList([
                                 ProgressBarCallback(),
@@ -138,4 +117,4 @@ if __name__ == "__main__":
     remaining_steps = 20000000
 
     model.learn(total_timesteps=remaining_steps, callback=callbacks, reset_num_timesteps=False)
-    model.save(f"./GANArousalAgents/PPO/NewMaxArousal/cnn_ppo_{label}_{run}_extended")
+    model.save(f"./GANArousalAgents/PPO/cnn_ppo_{label}_{run}_extended")
