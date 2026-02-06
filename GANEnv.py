@@ -258,20 +258,20 @@ class GANLevelEnv(gym.Env):
         self.astarAgent = AstarAgent() 
         self.game_env = None
 
-        playable, playable_distance, arousal_counter, self.game_env, state_list = self.astarAgent.AStarRun(segment, self.game_env, 0, 0)
+        playable, playable_distance, arousal_counter, self.game_env, state_list = self.astarAgent.AStarRun(segment, self.game_env, 0, 11)
         print("RESET, PLAYABLE: " + str(playable) + ", AROUSAL: " + str(arousal_counter))
         print("==========")
         return playable, arousal_counter
 
     def is_playable(self, segment, segment_count, step_max_count):
-        # return True, 0, []
+        return True, 0, []
 
         # agent = AstarAgent() 
         playable, playable_distance, arousal_counter, self.game_env, state_list = self.astarAgent.AStarRun(segment, self.game_env, segment_count, step_max_count)
         print("STEP, AROUSAL: " + str(arousal_counter))
-        print("state_list")
-        print(str(state_list))
-        print("------")
+        # print("state_list")
+        # print(str(state_list))
+        # print("------")
         return playable, arousal_counter, state_list
 
     def reward(self, arousal_counter, segment, index): 
@@ -287,26 +287,45 @@ class GANLevelEnv(gym.Env):
         reward = 0
 
         if index >= 0 and index < 4:
-            if arousal_counter == 0:
-                reward = 0
-                left = 0
-            else:
-                reward = arousal_counter
-                left = arousal_counter
+            reward = num_enemies
+            left = num_enemies
         elif index >= 4 and index < 8:
-            if arousal_counter == 0:
-                reward = 0
-                middle = 0
-            else:
-                reward = -arousal_counter
-                middle = arousal_counter
+            reward = -num_enemies
+            middle = num_enemies
         elif index >= 8:
-            if arousal_counter == 0:
-                reward = 0
-                right = 0
-            else:
-                reward = arousal_counter
-                right = arousal_counter
+            reward = num_enemies
+            right = num_enemies
+
+        print("INDEX: " + str(index))
+        print("LEFT: " + str(left))
+        print("MIDDLE: " + str(middle))
+        print("RIGHT: " + str(right))
+        print("=========")
+        
+        # reward = arousal_counter
+        # left = arousal_counter
+
+        # if index >= 0 and index < 4:
+        #     if arousal_counter == 0:
+        #         reward = 0
+        #         left = 0
+        #     else:
+        #         reward = arousal_counter
+        #         left = arousal_counter
+        # elif index >= 4 and index < 8:
+        #     if arousal_counter == 0:
+        #         reward = 0
+        #         middle = 0
+        #     else:
+        #         reward = -arousal_counter
+        #         middle = arousal_counter
+        # elif index >= 8:
+        #     if arousal_counter == 0:
+        #         reward = 0
+        #         right = 0
+        #     else:
+        #         reward = arousal_counter
+        #         right = arousal_counter
         # reward = -arousal_counter
 
         # reward = num_enemies

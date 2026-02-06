@@ -109,37 +109,218 @@ def generate_graph_using_module():
     plt.grid(True)
     plt.show()
     
-def generate_multiple_enemies_graph():
-    # log_file = "RecordedLogs\MultipleValuesRecordedWithoutPlayability\enemy_count.txt"
-    log_file = os.path.join( "ExperimentLogs", "ResultsLog_1", "enemy_count.txt" )
+def distribute_segments(total_playable):
+    if total_playable > 0:
+        left = min(total_playable, 3)
+        total_playable -= left
+    else:
+        left = 0
 
-    values_1 = []
-    values_2 = []
-    values_3 = []
+    if total_playable > 0:
+        middle = min(total_playable, 4)
+        total_playable -= middle
+    else:
+        middle = 0
 
-    with open(log_file, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
+    if total_playable > 0:
+        right = min(total_playable, 3)
+    else:
+        right = 0
+
+    return left, middle, right
+
+def load_multi_enemy_run(run_folder):
+    log_file = os.path.join("ExperimentLogs", "MultiEnemy", run_folder, "enemy_count.txt")
+    playable_log_file = os.path.join("ExperimentLogs", "MultiEnemy", run_folder, "playable_results.txt")
+
+    avg_left = []
+    avg_middle = []
+    avg_right = []
+
+    with open(log_file, "r") as enemy_f, open(playable_log_file, "r") as playable_f:
+        for enemy_line, playable_line in zip(enemy_f, playable_f):
+
+            enemy_parts = [p.strip() for p in enemy_line.split(":")]
+            playable_parts = [p.strip() for p in playable_line.split(":")]
+
+            if len(enemy_parts) != 4 or len(playable_parts) != 3:
                 continue
 
-            parts = [p.strip() for p in line.split(":")]
-            if len(parts) != 4:
+            _, left, middle, right = enemy_parts
+            left = float(left)
+            middle = float(middle)
+            right = float(right)
+
+            _, is_playable, n = playable_parts
+
+            # IMPORTANT FIX: is_playable is a STRING
+            is_playable = is_playable.lower() == "true"
+
+            playable_segments = int(n) if is_playable else int(n) - 1
+            if playable_segments <= 0:
+                avg_left.append(0)
+                avg_middle.append(0)
+                avg_right.append(0)
                 continue
 
-            v1, v2, v3, v4 = parts
-            values_1.append(float(v2))
-            values_2.append(float(v3))
-            values_3.append(float(v4))
+            left_s, middle_s, right_s = distribute_segments(playable_segments)
 
-    x = range(len(values_1))
+            avg_left.append(left / left_s if left_s > 0 else 0)
+            avg_middle.append(middle / middle_s if middle_s > 0 else 0)
+            avg_right.append(right / right_s if right_s > 0 else 0)
+
+    return avg_left, avg_middle, avg_right
+
+def smooth_with_padding(data, window, poly):
+    pad = window // 2
+    padded = np.pad(data, pad_width=pad, mode="edge")
+    smoothed = savgol_filter(padded, window, poly)
+    return smoothed[pad:-pad]
+
+def generate_average_dev_multiple_enemies_graph():
+    runs = ["MultiEnemy1", "MultiEnemy2", "MultiEnemy3"]
+
+    all_left = []
+    all_middle = []
+    all_right = []
+
+    plt.rcParams.update({
+        "font.size": 14,        # base text size
+        "axes.titlesize": 16,
+        "axes.labelsize": 14,
+        "legend.fontsize": 12,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+    })
+    
+
+    for run in runs:
+        left, middle, right = load_multi_enemy_run(run)
+        all_left.append(left)
+        all_middle.append(middle)
+        all_right.append(right)
+
+    min_len = min(
+        min(len(v) for v in all_left),
+        min(len(v) for v in all_middle),
+        min(len(v) for v in all_right),
+    )
+
+    all_left   = [v[:min_len] for v in all_left]
+    all_middle = [v[:min_len] for v in all_middle]
+    all_right  = [v[:min_len] for v in all_right]
+
+    left_data   = np.array(all_left)
+    middle_data = np.array(all_middle)
+    right_data  = np.array(all_right)
+
+    left_mean   = np.mean(left_data, axis=0)
+    left_std    = np.std(left_data, axis=0)
+
+    middle_mean = np.mean(middle_data, axis=0)
+    middle_std  = np.std(middle_data, axis=0)
+
+    right_mean  = np.mean(right_data, axis=0)
+    right_std   = np.std(right_data, axis=0)
 
     window = 41
     poly = 2
 
-    smooth_1 = savgol_filter(values_1, window, poly)
-    smooth_2 = savgol_filter(values_2, window, poly)
-    smooth_3 = savgol_filter(values_3, window, poly)
+    if window > min_len:
+        window = min_len if min_len % 2 == 1 else min_len - 1
+
+    left_mean_s = smooth_with_padding(left_mean, window, poly)
+    left_std_s  = smooth_with_padding(left_std, window, poly)
+
+    middle_mean_s = smooth_with_padding(middle_mean, window, poly)
+    middle_std_s  = smooth_with_padding(middle_std, window, poly)
+
+    right_mean_s = smooth_with_padding(right_mean, window, poly)
+    right_std_s  = smooth_with_padding(right_std, window, poly)
+
+    x = np.arange(min_len)
+
+    plt.figure()
+
+    plt.plot(x, left_mean_s, linestyle='-',  linewidth=2, label="Left Section")
+    plt.fill_between(x, left_mean_s - left_std_s, left_mean_s + left_std_s, alpha=0.3, label="+1 Std Dev")
+
+    plt.plot(x, middle_mean_s, linestyle='--', linewidth=2, label="Middle Section")
+    plt.fill_between(x, middle_mean_s - middle_std_s, middle_mean_s + middle_std_s, alpha=0.3, label="+1 Std Dev")
+
+    plt.plot(x, right_mean_s, linestyle=':',  linewidth=2, label="Right Section")
+    plt.fill_between(x, right_mean_s - right_std_s, right_mean_s + right_std_s, alpha=0.3, label="+1 Std Dev")
+
+
+    plt.xlabel("Episode")
+    plt.ylabel("Number of Enemies")
+    plt.title("Smoothed Average Number of Enemies Per Segment (Mean ± Std Dev)")
+    plt.legend(loc="upper left", bbox_to_anchor=(1, 1))
+    plt.show()
+
+
+def generate_multiple_enemies_graph():
+    # log_file = "RecordedLogs\MultipleValuesRecordedWithoutPlayability\enemy_count.txt"
+    log_file = os.path.join( "ExperimentLogs", "MultiEnemy", "MultiEnemy3", "enemy_count.txt")
+    playable_log_file = os.path.join( "ExperimentLogs", "MultiEnemy", "MultiEnemy3", "playable_results.txt")
+
+    avg_left = []
+    avg_middle = []
+    avg_right = []
+
+    with open(log_file, "r") as enemy_f, open(playable_log_file, "r") as playable_f:
+        for enemy_line, playable_line in zip(enemy_f, playable_f):
+            enemy_line = enemy_line.strip()
+            playable_line = playable_line.strip()
+            if not enemy_line or not playable_line:
+                continue
+
+            enemy_parts = [p.strip() for p in enemy_line.split(":")]
+            playable_parts = [p.strip() for p in playable_line.split(":")]
+            
+            if len(enemy_parts) != 4 or len(playable_parts) != 3:
+                continue
+
+            _, left, middle, right = enemy_parts
+            left = float(left)
+            middle = float(middle)
+            right = float(right)
+
+            _, is_playable, n = playable_parts
+            if bool(is_playable):
+                playable_segments = int(n)
+            else:
+                playable_segments = int(n) - 1
+
+            if playable_segments > 0:
+                left_segments, middle_segments, right_segments = distribute_segments(playable_segments)
+                if left_segments > 0:
+                    avg_left.append(float(left / left_segments))
+                else:
+                    avg_left.append(0)
+
+                if middle_segments > 0:
+                    avg_middle.append(float(middle / middle_segments))
+                else:
+                    avg_middle.append(0)
+
+                if right_segments > 0:
+                    avg_right.append(float(right / right_segments))
+                else:
+                    avg_right.append(0)
+            else:
+                avg_left.append(0)
+                avg_middle.append(0)
+                avg_right.append(0)
+
+    x = range(len(avg_left))
+
+    window = 41
+    poly = 2
+
+    smooth_1 = savgol_filter(avg_left, window, poly)
+    smooth_2 = savgol_filter(avg_middle, window, poly)
+    smooth_3 = savgol_filter(avg_right, window, poly)
 
     plt.figure()
     plt.plot(x, smooth_1, label="Left Section")
@@ -477,7 +658,7 @@ def unity_generate_level():
     #     device='cuda',
     # )
 
-    model = PPO.load("GANArousalAgents\MinArousal\cnn_ppo_optimize_1_14000_steps", env=env)
+    model = PPO.load("GANArousalAgents\MultiEnemy1\cnn_ppo_optimize_1_28000_steps", env=env)
 
     obs, info = env.reset()
     
@@ -546,7 +727,9 @@ def unity_generate_level():
     plt.show()
 
 if __name__ == '__main__':
-    unity_generate_level()
+    generate_average_dev_multiple_enemies_graph()
+    # generate_multiple_enemies_graph()
+    # unity_generate_level()
     # generate_graph()
     # evaluate_model()
     # generate_graph_with_average()

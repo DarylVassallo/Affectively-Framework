@@ -74,69 +74,68 @@ if __name__ == "__main__":
     env = GANLevelEnv()
     env = Monitor(env)
 
-    eval_env = GANLevelEnv()
-    eval_env = Monitor(eval_env)
+    # eval_env = GANLevelEnv()
+    # eval_env = Monitor(eval_env)
 
     label = 'optimize' if weight == 0 else 'arousal' if weight == 1 else 'blended'
 
     checkpoint_callback = CheckpointCallback(
                                                 save_freq=500,
-                                                save_path="./GANArousalAgents/PPO/MinArousal2/",
+                                                save_path="./GANArousalAgents/PPO/NewMaxArousal/",
                                                 name_prefix=f"cnn_ppo_{label}_{run}"
                                             )
     
-    stop_train_callback = StopTrainingOnNoModelImprovement(
-        max_no_improvement_evals=3,
-        min_evals=3,
-        verbose=1
-    )
+    # stop_train_callback = StopTrainingOnNoModelImprovement(
+    #     max_no_improvement_evals=3,
+    #     min_evals=3,
+    #     verbose=1
+    # )
 
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path="./GANArousalAgents/PPO/MinArousal2/best_model/",
-        log_path="./GANArousalAgents/PPO/MinArousal2/eval_logs/",
-        eval_freq=1000,
-        n_eval_episodes=3,
-        deterministic=True,
-        callback_after_eval=stop_train_callback
-    )
+    # eval_callback = EvalCallback(
+    #     eval_env,
+    #     best_model_save_path="./GANArousalAgents/PPO/NewMaxArousal/best_model/",
+    #     log_path="./GANArousalAgents/PPO/NewMaxArousal/eval_logs/",
+    #     eval_freq=1000,
+    #     n_eval_episodes=3,
+    #     deterministic=True,
+    #     callback_after_eval=stop_train_callback
+    # )
     
     callbacks = CallbackList([
                                 ProgressBarCallback(),
                                 checkpoint_callback,
-                                eval_callback
                             ])
 
 
-    # policy_kwargs = dict(
-    #     features_extractor_class=CustomMLPExtractor,
-    #     features_extractor_kwargs=dict(features_dim=256),
-    #     net_arch = dict(pi=[256, 256], vf=[256, 256]),
-    #     activation_fn = torch.nn.ReLU,
-    # )
-
-    # model = PPO(
-    #     policy="MlpPolicy",
-    #     policy_kwargs=policy_kwargs,
-    #     env=env,
-    #     verbose=1,
-    #     n_steps=64,
-    #     tensorboard_log="./Tensorboard/CNN/",
-    #     device='cuda',
-    # )
-
-    checkpoint_path = "./GANArousalAgents/PPO/MinArousal2/cnn_ppo_optimize_1_6500_steps.zip"
-
-    model = PPO.load(
-        checkpoint_path,
-        env=env,
-        device="cuda",
-        tensorboard_log="./Tensorboard/CNN/"
+    policy_kwargs = dict(
+        features_extractor_class=CustomMLPExtractor,
+        features_extractor_kwargs=dict(features_dim=256),
+        net_arch = dict(pi=[256, 256], vf=[256, 256]),
+        activation_fn = torch.nn.ReLU,
     )
-    model.verbose = 1
 
-    remaining_steps = 20000000 - model.num_timesteps
-    # remaining_steps = 20000000
+    model = PPO(
+        policy="MlpPolicy",
+        policy_kwargs=policy_kwargs,
+        env=env,
+        verbose=1,
+        n_steps=64,
+        tensorboard_log="./Tensorboard/CNN/",
+        device='cuda',
+    )
+
+    # checkpoint_path = "./GANArousalAgents/PPO/NewMaxArousal/cnn_ppo_optimize_1_6500_steps.zip"
+
+    # model = PPO.load(
+    #     checkpoint_path,
+    #     env=env,
+    #     device="cuda",
+    #     tensorboard_log="./Tensorboard/CNN/"
+    # )
+    # model.verbose = 1
+
+    # remaining_steps = 20000000 - model.num_timesteps
+    remaining_steps = 20000000
 
     model.learn(total_timesteps=remaining_steps, callback=callbacks, reset_num_timesteps=False)
-    model.save(f"./GANArousalAgents/PPO/MinArousal2/cnn_ppo_{label}_{run}_extended")
+    model.save(f"./GANArousalAgents/PPO/NewMaxArousal/cnn_ppo_{label}_{run}_extended")
